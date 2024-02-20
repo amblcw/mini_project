@@ -7,3 +7,5 @@ ex) pirnt() <- 함수, Minmaxscaler() <- 클래스, N_SPLITS <-상수
 5. 서로 읽기 쉽게 주석 많이 달아주세요 
 
 테스트
+
+test2
