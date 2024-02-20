@@ -117,7 +117,24 @@ def make_delay_csv():
     
     return new_delay_csv
 
-
+def make_weather_csv():
+    row_weather_csv = pd.read_csv('./data/SURFACE_ASOS_108_HR_2023_2023_2024.csv',index_col=1,encoding='EUC-KR')
+    # print(row_weather_csv.columns)
+    '''
+    ['지점', '기온(°C)', '강수량(mm)', '풍속(m/s)', '풍향(16방위)', '습도(%)', '증기압(hPa)',
+       '이슬점온도(°C)', '현지기압(hPa)', '해면기압(hPa)', '일조(hr)', '일사(MJ/m2)', '적설(cm)',
+       '3시간신적설(cm)', '전운량(10분위)', '중하층운량(10분위)', '운형(운형약어)', '최저운고(100m )',
+       '시정(10m)', '지면상태(지면상태코드)', '현상번호(국내식)', '지면온도(°C)', '5cm 지중온도(°C)',
+       '10cm 지중온도(°C)', '20cm 지중온도(°C)', '30cm 지중온도(°C)']
+    '''
+    row_weather_csv = row_weather_csv.drop(['지점','풍속(m/s)', '풍향(16방위)', '습도(%)', '증기압(hPa)',
+       '이슬점온도(°C)', '현지기압(hPa)', '해면기압(hPa)', '일조(hr)', '일사(MJ/m2)',
+       '3시간신적설(cm)', '전운량(10분위)', '중하층운량(10분위)', '운형(운형약어)', '최저운고(100m )',
+       '시정(10m)', '지면상태(지면상태코드)', '현상번호(국내식)', '지면온도(°C)', '5cm 지중온도(°C)',
+       '10cm 지중온도(°C)', '20cm 지중온도(°C)', '30cm 지중온도(°C)'],axis=1)
+    row_weather_csv = row_weather_csv.fillna(0)
+    row_weather_csv = row_weather_csv.astype(float)
+    return row_weather_csv
 
 def scaling():
     pass
@@ -125,4 +142,5 @@ def scaling():
 if __name__ == "__main__":
     # print(make_passenger_csv())
     # print(make_transfer_csv())
-    print(make_delay_csv())
+    # print(make_delay_csv())
+    print(make_weather_csv())
