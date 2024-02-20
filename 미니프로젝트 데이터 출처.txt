@@ -1,0 +1,7 @@
+서울교통공사_역별 일별 시간대별 승하차인원 정보
+https://www.data.go.kr/data/15048032/fileData.do
+교통카드기반 역별 일별 승하차 인원 정보
+https://data.seoul.go.kr/dataList/OA-12914/S/1/datasetView.do#
+
+서울 기상데이터 (SURFACE_ASOS_108_HR_2023_2023_2024)
+https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36&tabNo=1
