@@ -38,7 +38,7 @@ def congestion_file_analyze():
             max_transfer[key] = round(160 * 6 * value)
         else:
             max_transfer[key] = round(160 * 8 * value)
-    print("각 호선 별 최대 승객수",max_transfer)
+    print("각 호선별 최대 승객수",max_transfer)
     # 각 호선 별 최대 승객수 {1: 172480, 2: 275680, 3: 247680, 4: 296800, 5: 180352, 6: 145664, 7: 205568, 8: 131328}
             
 
