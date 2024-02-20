@@ -69,23 +69,72 @@ def make_delay_csv():
     
     형식:
     날짜(index) | 지연시간대 | 1호선지연(분) | 2호선지연(분) | 3호선지연(분) ... 8호선지연(분)
-    2023-01-01    첫차~09시        0               5              0               0
+    2023-01-01    09시~18시        0               5              0               0
+    2023-01-02    첫차~09시        0               20             0               0
     '''
-    if os.path.exists('./data/delay_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-        return pd.read_pickle('./data/delay_list.pkl')
+    # if os.path.exists('./data/delay_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+    #     return pd.read_pickle('./data/delay_list.pkl')
     
-    row_delay_csv = pd.read_csv('./data/서울교통공사_노선별 지연시간 정보_20230831.csv',index_col=1,encoding="EUC-KR")
-    row_delay_csv = row_delay_csv.drop('연번',axis=1)
+    row_delay_csv = pd.read_csv('./data/서울교통공사_노선별 지연시간 정보_20230831.csv',index_col=0,encoding="EUC-KR")
     
     subway_line_num = row_delay_csv['노선'].copy()
     subway_line_num = subway_line_num.str.replace("호선","")
     subway_line_num = subway_line_num.str.split()
-    print(subway_line_num)
-    row_delay_csv['노선'] = subway_line_num
+    for idx, data in enumerate(subway_line_num):
+        subway_line_num[idx+1] = int(data[0])
+    row_delay_csv['노선'] = subway_line_num 
+
+    # new_delay_csv = pd.DataFrame(columns=['지연시간대','1호선지연(분)','2호선지연(분)','3호선지연(분)','4호선지연(분)',
+    #                                       '5호선지연(분)','6호선지연(분)','7호선지연(분)','8호선지연(분)'])
     
-    return row_delay_csv
+    date_list = np.unique(row_delay_csv['지연일자'])
+    subway_line_list = np.unique(row_delay_csv['노선'])
+    time_list = np.unique(row_delay_csv['지연시간대'])
+    
+    new_delay_csv = pd.DataFrame()
+    for date in date_list:
+        split_by_date = row_delay_csv[row_delay_csv["지연일자"] == date].copy()
+        for subway_line in subway_line_list:
+            split_by_line = split_by_date[split_by_date["노선"] == subway_line].copy()
+            for time_num in time_list:
+                temp_data = split_by_line[split_by_line["지연시간대"] == time_num].copy()
+                if temp_data.shape[0] == 0:
+                    continue
+                delay_time = temp_data['최대지연시간'].max()
+                delay_time = delay_time.split()[0]
+                
+                data = pd.DataFrame({'지연일자':[date],'지연시간대':[time_num],})
+                for i in range(1,9):
+                    if i == subway_line:
+                        data[f'{i}호선지연(분)'] = int(delay_time[:-1])
+                    else:
+                        data[f'{i}호선지연(분)'] = 0
+                  
+                new_delay_csv = pd.concat([new_delay_csv,data])
+    
+    new_delay_csv = new_delay_csv.set_index(keys='지연일자')
+    new_delay_csv.to_pickle('./data/delay_list.pkl')
+    
+    return new_delay_csv
 
-
+def make_weather_csv():
+    row_weather_csv = pd.read_csv('./data/SURFACE_ASOS_108_HR_2023_2023_2024.csv',index_col=1,encoding='EUC-KR')
+    # print(row_weather_csv.columns)
+    '''
+    ['지점', '기온(°C)', '강수량(mm)', '풍속(m/s)', '풍향(16방위)', '습도(%)', '증기압(hPa)',
+       '이슬점온도(°C)', '현지기압(hPa)', '해면기압(hPa)', '일조(hr)', '일사(MJ/m2)', '적설(cm)',
+       '3시간신적설(cm)', '전운량(10분위)', '중하층운량(10분위)', '운형(운형약어)', '최저운고(100m )',
+       '시정(10m)', '지면상태(지면상태코드)', '현상번호(국내식)', '지면온도(°C)', '5cm 지중온도(°C)',
+       '10cm 지중온도(°C)', '20cm 지중온도(°C)', '30cm 지중온도(°C)']
+    '''
+    row_weather_csv = row_weather_csv.drop(['지점','풍속(m/s)', '풍향(16방위)', '습도(%)', '증기압(hPa)',
+       '이슬점온도(°C)', '현지기압(hPa)', '해면기압(hPa)', '일조(hr)', '일사(MJ/m2)',
+       '3시간신적설(cm)', '전운량(10분위)', '중하층운량(10분위)', '운형(운형약어)', '최저운고(100m )',
+       '시정(10m)', '지면상태(지면상태코드)', '현상번호(국내식)', '지면온도(°C)', '5cm 지중온도(°C)',
+       '10cm 지중온도(°C)', '20cm 지중온도(°C)', '30cm 지중온도(°C)'],axis=1)
+    row_weather_csv = row_weather_csv.fillna(0)
+    row_weather_csv = row_weather_csv.astype(float)
+    return row_weather_csv
 
 def scaling():
     pass
@@ -93,4 +142,5 @@ def scaling():
 if __name__ == "__main__":
     # print(make_passenger_csv())
     # print(make_transfer_csv())
-    print(make_delay_csv())
+    # print(make_delay_csv())
+    print(make_weather_csv())
