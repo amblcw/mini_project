@@ -49,6 +49,21 @@ if __name__ == '__main__':
 
 
 
+
+def wether_file_analyze():
+    '''
+    날씨 파일 분석 함수
+    '''
+    wether_csv = pd.read_csv("./data/SURFACE_ASOS_108_HR_2023_2023_2024.csv", index_col=0, encoding="euc-kr")
+    print(wether_csv.info())
+    
+
+wether_file_analyze()
+
+
+
+
+
 def weather_file_analyze():
     '''
     날씨 파일 분석 함수
@@ -128,23 +143,3 @@ def weather_file_analyze():
     
 
 
-
-    '''
-    # 시각화 설정
-    plt.figure(figsize=(10, 6))
-    
-    # Seaborn의 히스토그램
-    sns.boxplot(temperature_data, bins=20, kde=True, color='skyblue')
-    
-    # 그래프 제목과 축 라벨 설정
-    plt.title('Distribution of Temperature')
-    # plt.xlabel('Temperature (°C)')
-    plt.ylabel('Frequency')
-    
-    # 그래프 출력
-    plt.show()
-    '''
-    
-    
-
-weather_file_analyze()

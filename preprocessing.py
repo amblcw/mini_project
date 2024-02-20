@@ -60,11 +60,37 @@ def make_transfer_csv():
     return transfer_list
 
 def make_delay_csv():
-    pass
+    '''
+    from: 서울교통공사_노선별 지연시간 정보_20230831.csv
+    return: pd.Dataframe
+    
+    지하철 지연 시간 데이터를 만드는 함수입니다(라벨인코딩 포함)
+    지연시간은 최악을 상정해야하기에 노선 방향중 제일 긴 지연시간을 선택합니다
+    
+    형식:
+    날짜(index) | 지연시간대 | 1호선지연(분) | 2호선지연(분) | 3호선지연(분) ... 8호선지연(분)
+    2023-01-01    첫차~09시        0               5              0               0
+    '''
+    if os.path.exists('./data/delay_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+        return pd.read_pickle('./data/delay_list.pkl')
+    
+    row_delay_csv = pd.read_csv('./data/서울교통공사_노선별 지연시간 정보_20230831.csv',index_col=1,encoding="EUC-KR")
+    row_delay_csv = row_delay_csv.drop('연번',axis=1)
+    
+    subway_line_num = row_delay_csv['노선'].copy()
+    subway_line_num = subway_line_num.str.replace("호선","")
+    subway_line_num = subway_line_num.str.split()
+    print(subway_line_num)
+    row_delay_csv['노선'] = subway_line_num
+    
+    return row_delay_csv
+
+
 
 def scaling():
     pass
 
 if __name__ == "__main__":
-    print(make_passenger_csv())
-    print(make_transfer_csv())
+    # print(make_passenger_csv())
+    # print(make_transfer_csv())
+    print(make_delay_csv())
