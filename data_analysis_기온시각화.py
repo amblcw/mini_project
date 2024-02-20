@@ -29,6 +29,7 @@ def weather_file_analyze():
     #  2   강수량(mm)  809 non-null    float64
     #  3   적설(cm)   76 non-null     float64
     
+    
     '''데이터를 출력.'''
     print(weather_csv_filtered.head(3))
     #                  일시  기온(°C)  강수량(mm)  적설(cm)
@@ -61,12 +62,23 @@ def weather_file_analyze():
     
     # 박스 플롯 그리기
     import matplotlib.pyplot as plt
+    from matplotlib import font_manager, rc
+
+    # 한글 폰트 경로 설정
+    font_path = "C:/Windows/Fonts/malgun.ttf"  # 사용하고자 하는 한글 폰트 경로로 변경해주세요
+    font_name = font_manager.FontProperties(fname=font_path).get_name()
+    rc('font', family=font_name)
+    
+    # 마이너스 부호 깨짐 방지 설정
+    plt.rcParams['axes.unicode_minus'] = False
+    
+    # 그림의 크기 설정
+    plt.figure(figsize=(8, 8))
     plt.boxplot(temperature_data)
-    plt.ylabel('Temperature (°C)')
-    plt.title('Boxplot of Temperature Data')
+    plt.ylabel('기온 (°C)        ', rotation=0)
+    # plt.xlabel('123')
+    plt.title('기온 데이터의 박스플롯')
     plt.show()
-
-
 
 
 # 함수 호출

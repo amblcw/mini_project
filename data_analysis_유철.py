@@ -44,25 +44,6 @@ def congestion_file_analyze():
     # 각 호선 별 최대 승객수 {1: 172480, 2: 275680, 3: 247680, 4: 296800, 5: 180352, 6: 145664, 7: 205568, 8: 131328}
             
 
-if __name__ == '__main__':
-    congestion_file_analyze()
-
-
-
-
-def wether_file_analyze():
-    '''
-    날씨 파일 분석 함수
-    '''
-    wether_csv = pd.read_csv("./data/SURFACE_ASOS_108_HR_2023_2023_2024.csv", index_col=0, encoding="euc-kr")
-    print(wether_csv.info())
-    
-
-wether_file_analyze()
-
-
-
-
 
 def weather_file_analyze():
     '''
@@ -82,7 +63,7 @@ def weather_file_analyze():
     
     
     '''온도 데이터 선택'''
-    temperature_data = weather_csv['기온(°C)']
+    temperature_data = weather_csv_filtered['기온(°C)']  # 기온 데이터만 선택
     
     
     '''읽어온 데이터 정보를 출력합니다.'''
@@ -92,6 +73,7 @@ def weather_file_analyze():
     #  2   강수량(mm)  809 non-null    float64
     #  3   적설(cm)   76 non-null     float64
     
+    
     '''데이터를 출력.'''
     print(weather_csv_filtered.head(3))
     #                  일시  기온(°C)  강수량(mm)  적설(cm)
@@ -99,7 +81,7 @@ def weather_file_analyze():
     # 1 2023-01-01 01:00:00     1.5      NaN     NaN
     # 2 2023-01-01 02:00:00     1.5      NaN     NaN
 
-
+    
     def outliers(data_out):
         quartile_1, q2, quartile_3 = np.percentile(data_out, [25, 50, 75])  # 퍼센트 지점
         print('1사분위 : ', quartile_1)
@@ -117,29 +99,35 @@ def weather_file_analyze():
         return np.where((data_out > upper_bound) | (data_out < lower_bound))
 
 
-    # 이상치를 탐지할 데이터를 임의로 생성합니다.
-    data = np.random.normal(loc=0, scale=1, size=1000)
+    # 기온 데이터에 대한 이상치를 찾습니다.
+    outliers_indices = outliers(temperature_data)
+    print("이상치 인덱스:", outliers_indices)
 
-    # 이상치를 탐지합니다.
-    outlier_indices = outliers(data)
-
-    # Seaborn의 박스플롯을 생성합니다.
-    plt.figure(figsize=(8, 6))
-    sns.boxplot(data=data)
-
-    # 이상치의 위치를 표시합니다.
-    plt.scatter(outlier_indices, data[outlier_indices], color='red', label='Outliers')
-
-    # 그래프 제목과 축 라벨을 설정합니다.
-    plt.title('Boxplot with Outliers')
-    plt.xlabel('Data')
-    plt.ylabel('Values')
-
-    # 범례를 표시합니다.
-    plt.legend()
-
-    # 그래프를 출력합니다.
-    plt.show()        
     
+    # 박스 플롯 그리기
+    import matplotlib.pyplot as plt
+    from matplotlib import font_manager, rc
+
+    # 한글 폰트 경로 설정
+    font_path = "C:/Windows/Fonts/malgun.ttf"  # 사용하고자 하는 한글 폰트 경로로 변경해주세요
+    font_name = font_manager.FontProperties(fname=font_path).get_name()
+    rc('font', family=font_name)
+    
+    # 마이너스 부호 깨짐 방지 설정
+    plt.rcParams['axes.unicode_minus'] = False
+    
+    # 그림의 크기 설정
+    plt.figure(figsize=(8, 8))
+    plt.boxplot(temperature_data)
+    plt.ylabel('기온 (°C)        ', rotation=0)
+    # plt.xlabel('123')
+    plt.title('기온 데이터의 박스플롯')
+    plt.show()
 
 
+# 함수 호출
+weather_file_analyze()
+
+
+if __name__ == '__main__':
+    congestion_file_analyze()
