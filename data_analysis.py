@@ -25,6 +25,7 @@ def congestion_file_analyze():
             max_congestion[name] = real_data.max()
 
     print("각 호선별 최대 혼잡도",max_congestion)
+    # 각 호선별 최대 혼잡도 {1: 107.8, 2: 172.3, 3: 154.8, 4: 185.5, 5: 140.9, 6: 113.8, 7: 160.6, 8: 136.8}
     
     ''' 각 호선 별 최대 승객수 계산'''
     max_transfer = {}
@@ -36,6 +37,7 @@ def congestion_file_analyze():
         else:
             max_transfer[key] = round(160 * 8 * value)
     print("각 호선 별 최대 승객수",max_transfer)
+    # 각 호선 별 최대 승객수 {1: 172480, 2: 275680, 3: 247680, 4: 296800, 5: 180352, 6: 145664, 7: 205568, 8: 131328}
             
 
 if __name__ == '__main__':
