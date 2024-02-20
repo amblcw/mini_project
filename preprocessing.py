@@ -55,15 +55,16 @@ def make_transfer_csv():
     subway_line_num = transfer_list['호선']
     subway_line_num = subway_line_num.str.replace("호선","").astype(int)    # 몇호선에서 숫자만 남김
     transfer_list['호선'] = subway_line_num
+    transfer_list = transfer_list.set_index(keys='날짜')
     transfer_list.to_pickle('./data/trasfer_list.pkl')
     return transfer_list
 
-def label_encode():
+def make_delay_csv():
     pass
 
 def scaling():
     pass
 
 if __name__ == "__main__":
-    # print(make_passenger_csv())
+    print(make_passenger_csv())
     print(make_transfer_csv())
