@@ -44,24 +44,6 @@ def congestion_file_analyze():
     # 각 호선 별 최대 승객수 {1: 172480, 2: 275680, 3: 247680, 4: 296800, 5: 180352, 6: 145664, 7: 205568, 8: 131328}
             
 
-if __name__ == '__main__':
-    congestion_file_analyze()
-
-
-
-
-def wether_file_analyze():
-    '''
-    날씨 파일 분석 함수
-    '''
-    wether_csv = pd.read_csv("./data/SURFACE_ASOS_108_HR_2023_2023_2024.csv", index_col=0, encoding="euc-kr")
-    print(wether_csv.info())
-    
-
-wether_file_analyze()
-
-
-
 
 
 def weather_file_analyze():
@@ -114,4 +96,8 @@ def weather_file_analyze():
     plt.show()
     
 
-weather_file_analyze()
+
+
+if __name__ == '__main__':
+    # congestion_file_analyze()
+    weather_file_analyze()
