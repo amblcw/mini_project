@@ -140,7 +140,9 @@ def scaling():
     pass
 
 if __name__ == "__main__":
-    # print(make_passenger_csv())
-    # print(make_transfer_csv())
-    # print(make_delay_csv())
-    print(make_weather_csv())
+    passenger_csv = make_passenger_csv()
+    transfer_csv = make_transfer_csv()
+    delay_csv = make_delay_csv()
+    weather_csv = make_weather_csv()
+    
+    print(passenger_csv.shape,transfer_csv.shape,delay_csv.shape,weather_csv.shape)
