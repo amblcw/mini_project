@@ -32,8 +32,8 @@ def make_transfer_csv():
     각종 이용객 유형을 제거하고 단순 이용객 수로 합쳤습니다
     !! 이미 파일이 존재하면 그냥 읽어서 반환하기에 변경사항 있으면 유의할 것
     '''
-    # if os.path.exists('./data/trasfer_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-    #     return pd.read_pickle('./data/trasfer_list.pkl')
+    if os.path.exists('./data/trasfer_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+        return pd.read_pickle('./data/trasfer_list.pkl')
     
     row_transfer_csv = pd.read_csv("./data/서울교통공사_1_8호선 역별 일별 승객유형별 수송인원(환승유입인원 포함) 정보_20221231.csv",index_col=0,encoding="EUC-KR")
     
@@ -140,23 +140,33 @@ def make_weather_csv():
     row_weather_csv = row_weather_csv.astype(float)
     return row_weather_csv
 
+def make_bus_csv():
+    row_bus_csv = pd.read_csv("./data/2023년1~8월 일별 버스 이용객수2.csv",index_col=0)
+    # print(row_bus_csv.head)
+    return row_bus_csv
+
 def scaling():
     pass
 
 if __name__ == "__main__":
     passenger_csv = make_passenger_csv()
-    transfer_csv = make_transfer_csv()
+    # transfer_csv = make_transfer_csv()
     delay_csv = make_delay_csv()
     weather_csv = make_weather_csv()
+    bus_csv = make_bus_csv()
     
-    print(passenger_csv.shape,transfer_csv.shape,delay_csv.shape,weather_csv.shape)
-    # (132598, 25) (99608, 3) (671, 9) (8760, 3)
-    print(len(np.unique(passenger_csv['역번호'])))  # 282
-    print(len(np.unique(transfer_csv['역번호'])))  # 282
+    print(passenger_csv.shape,delay_csv.shape,weather_csv.shape, bus_csv.shape)
+    # (132598, 25) (671, 9) (8760, 3) (242, 3)
+    '''
+    같은 날자-시간 즉 시간단위로 인덱스를 잡고
+    정류장의 경우 옆 컬럼으로서 늘려서 해결한다
     
-    station_of_passenger = np.unique(passenger_csv['역번호'])
-    station_of_transfer = np.unique(transfer_csv['역번호'])
-    for i in station_of_transfer:           # 서로 다른 역 데이터가 있는지 확인
-        if i not in station_of_passenger:
-            print(i)    # 2754, 2761
+    최종적으로 모두 weather 행 개수에 맞춰져야(단 00시~04시는 잘라내고)
+    passenger   : 일단위에서 시간단위로 바꾸기, 정류장 행이 아니라 컬럼으로 바꾸기
+    delay       : 반나절단위에서 시간단위로 바꾸기, 정류장 칼럼으로 바꾸기
+    weather     : 00~04시 잘라내기
+    bus         : 시간단위로 바꾸기
+    '''
             
+    # make_bus_csv()
+    print(len(weather_csv[weather_csv['강수량(mm)'] != 0.0]))   # 632
