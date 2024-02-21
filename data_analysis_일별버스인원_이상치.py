@@ -46,7 +46,7 @@ from datetime import datetime
             
 
 
-def user_file_analyze():
+def bus_user_file_analyze():
     '''
     1월~8월 일별 버스 이용인원 파일 분석 함수
     '''
@@ -129,7 +129,7 @@ def user_file_analyze():
 
 
 # 함수 호출
-user_file_analyze()
+bus_user_file_analyze()
 
 
 
