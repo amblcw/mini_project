@@ -30,11 +30,15 @@ def make_transfer_csv():
     
     각 역별 환승(버스에서 지하철로 추정) 이용객 수 데이터를 만드는 함수입니다(라벨인코딩 포함)
     각종 이용객 유형을 제거하고 단순 이용객 수로 합쳤습니다
+    !! 이미 파일이 존재하면 그냥 읽어서 반환하기에 변경사항 있으면 유의할 것
     '''
-    if os.path.exists('./data/trasfer_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-        return pd.read_pickle('./data/trasfer_list.pkl')
+    # if os.path.exists('./data/trasfer_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+    #     return pd.read_pickle('./data/trasfer_list.pkl')
     
     row_transfer_csv = pd.read_csv("./data/서울교통공사_1_8호선 역별 일별 승객유형별 수송인원(환승유입인원 포함) 정보_20221231.csv",index_col=0,encoding="EUC-KR")
+    
+    row_transfer_csv = row_transfer_csv[row_transfer_csv["역번호"] != 2754] # 해당 역들은 passenger_csv에 존재하지 않기에 제거
+    row_transfer_csv = row_transfer_csv[row_transfer_csv["역번호"] != 2761]
     
     date_list = np.unique(row_transfer_csv['날짜'])
     subway_line_list = np.unique(row_transfer_csv['호선'])
@@ -46,7 +50,7 @@ def make_transfer_csv():
         for subway_line in subway_line_list:
             split_by_line = split_by_date[split_by_date["호선"] == subway_line].copy()
             for station_num in station_list:
-                temp_data = split_by_line[split_by_line["역번호"] == station_num].copy()
+                temp_data = split_by_line[split_by_line["역번호"] == station_num].copy()    # 일련의 for문들은 같은 날짜,같은 호선, 같은 역번호에서 상행 하행등으로 나뉜것을 합치기 위함
                 if temp_data.shape[0] == 0:
                     continue
                 data = pd.DataFrame({'날짜':[date],'호선':[subway_line],'역번호':[station_num],'환승유입인원':[temp_data['환승유입인원'].sum()]})
@@ -73,7 +77,7 @@ def make_delay_csv():
     2023-01-02    첫차~09시        0               20             0               0
     '''
     # if os.path.exists('./data/delay_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-    #     return pd.read_pickle('./data/delay_list.pkl')
+    #     return pd.read_pickle('./data/delay_list.pkl')       
     
     row_delay_csv = pd.read_csv('./data/서울교통공사_노선별 지연시간 정보_20230831.csv',index_col=0,encoding="EUC-KR")
     
@@ -146,3 +150,13 @@ if __name__ == "__main__":
     weather_csv = make_weather_csv()
     
     print(passenger_csv.shape,transfer_csv.shape,delay_csv.shape,weather_csv.shape)
+    # (132598, 25) (99608, 3) (671, 9) (8760, 3)
+    print(len(np.unique(passenger_csv['역번호'])))  # 282
+    print(len(np.unique(transfer_csv['역번호'])))  # 282
+    
+    station_of_passenger = np.unique(passenger_csv['역번호'])
+    station_of_transfer = np.unique(transfer_csv['역번호'])
+    for i in station_of_transfer:           # 서로 다른 역 데이터가 있는지 확인
+        if i not in station_of_passenger:
+            print(i)    # 2754, 2761
+            
