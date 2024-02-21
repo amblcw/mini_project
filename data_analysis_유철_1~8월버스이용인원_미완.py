@@ -48,43 +48,43 @@ from datetime import datetime
 
 def user_file_analyze():
     '''
-    1월~8월 이용인원 파일 분석 함수
+    1월~8월 일별 버스 이용인원 파일 분석 함수
     '''
     # 원하는 컬럼들을 리스트로 지정합니다.
-    desired_columns = ["날짜", "호선", "역번호", "역명","구분","06시 이전",
-                       "06 ~ 07","07 ~ 08","08 ~ 09","09 ~ 10","10 ~ 11",
-                       "11 ~ 12","12 ~ 13","13 ~ 14","14 ~ 15","15 ~ 16",
-                       "16 ~ 17","17 ~ 18","18 ~ 19","19 ~ 20","20 ~ 21",
-                       "21 ~ 22","22 ~ 23","23 ~ 24","24시 이후","합 계",]
+    desired_columns = ["사용일자", "승차총승객수", "하차총승객수",]
+                       
 
     # 원하는 컬럼만 선택하여 파일을 읽어옵니다.
-    user_csv = pd.read_csv("./data/2023년 1~8월 이용인원.csv",
+    user_csv = pd.read_csv("./data/2023년1~8월 일별 버스 이용객수2.csv",
                                 usecols=desired_columns, 
-                                # parse_dates=['날짜'],
+                                parse_dates=['사용일자'],
                                 # encoding="euc-kr",
                                 # index_col=0
                                 )
     
-    # 데이트타임으로 변환
     
-     
-    
-    
-    '''합계 데이터 선택'''
-    user_data = user_csv['합 계']  # 기온 데이터만 선택
+    '''승차 하차 데이터 선택'''
+    user_on_data = user_csv['승차총승객수']  # 
+    user_off_data = user_csv['하차총승객수']  # 
     
     
     '''읽어온 데이터 정보를 출력합니다.'''
     print(user_csv.info())
-    
+    #  #   Column  Non-Null Count  Dtype
+    # ---  ------  --------------  -----
+    #  0   사용일자    242 non-null    datetime64[ns]
+    #  1   승차총승객수  242 non-null    int64
+    #  2   하차총승객수  242 non-null    int64    
     
     
     '''데이터를 출력.'''
     print(user_csv.head(3))
+    #   사용일자   승차총승객수   하차총승객수
+    # 0 2023-01-01  2310197  2257688
+    # 1 2023-01-02  4413450  4319065
+    # 2 2023-01-03  4625953  4527318    
     
 
-'''
-    
     def outliers(data_out):
         quartile_1, q2, quartile_3 = np.percentile(data_out, [25, 50, 75])  # 퍼센트 지점
         print('1사분위 : ', quartile_1)
@@ -102,11 +102,11 @@ def user_file_analyze():
         return np.where((data_out > upper_bound) | (data_out < lower_bound))
 
 
-    # 기온 데이터에 대한 이상치를 찾습니다.
-    outliers_indices = outliers(temperature_data)
+    # 승차, 하차 데이터에 대한 이상치를 찾습니다.
+    outliers_indices = outliers([user_on_data, user_off_data])
     print("이상치 인덱스:", outliers_indices)
 
-    
+
     # 박스 플롯 그리기
     import matplotlib.pyplot as plt
     from matplotlib import font_manager, rc
@@ -120,20 +120,22 @@ def user_file_analyze():
     plt.rcParams['axes.unicode_minus'] = False
     
     # 그림의 크기 설정
-    plt.figure(figsize=(8, 8))
-    plt.boxplot(temperature_data)
-    plt.ylabel('기온 (°C)        ', rotation=0)
+    plt.figure(figsize=(10, 10))
+    plt.boxplot([user_on_data,user_off_data], labels=['승차총승객수', '하차총승객수'])
+    plt.ylabel('승객수                  \n(단위 백만)                  ', rotation=0)
     # plt.xlabel('123')
-    plt.title('기온 데이터의 박스플롯')
+    plt.title('일별 버스 이용객 승하차수의 박스플롯')
     plt.show()
 
 
 # 함수 호출
-weather_file_analyze()
+user_file_analyze()
 
 
-'''
 
-if __name__ == '__main__':
-    # congestion_file_analyze()
-    user_file_analyze()
+
+
+# if __name__ == '__main__':
+#     # congestion_file_analyze()
+#     user_file_analyze()
+# user_file_analyze()
