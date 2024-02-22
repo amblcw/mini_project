@@ -106,8 +106,6 @@ def make_delay_csv():
                 '5호선지연(분)','6호선지연(분)','7호선지연(분)','8호선지연(분)']
     new_delay_csv = pd.DataFrame(index=full_time_list, columns=line_list).fillna(0)
     
-    print(new_delay_csv[:20])
-    
     date_list = np.unique(row_delay_csv['지연일자'])
     subway_line_list = np.unique(row_delay_csv['노선'])
     time_list = np.unique(row_delay_csv['지연시간대'])
@@ -150,6 +148,7 @@ def make_weather_csv():
        '10cm 지중온도(°C)', '20cm 지중온도(°C)', '30cm 지중온도(°C)'],axis=1)
     row_weather_csv = row_weather_csv.fillna(0)
     row_weather_csv = row_weather_csv.astype(float)
+    row_weather_csv = row_weather_csv.loc[:'2023-08-31 23:00:00']
     return row_weather_csv
 
 def make_bus_csv():
@@ -220,7 +219,9 @@ if __name__ == "__main__":
     bus_csv = make_bus_csv()
     
     print(passenger_csv.shape,delay_csv.shape,weather_csv.shape, bus_csv.shape)
-    # (132598, 25) (671, 9) (8760, 3) (242, 3)
+    # (132598, 25) (5832, 8) (5832, 3) (242, 3)
+
+    
     '''
     같은 날자-시간 즉 시간단위로 인덱스를 잡고
     정류장의 경우 옆 컬럼으로서 늘려서 해결한다
