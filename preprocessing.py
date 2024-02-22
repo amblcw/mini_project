@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 import pickle
 import os.path
+import datetime as dt
 
-def make_passenger_csv():
+def make_passenger_csv():   # 일 단위로 자른다음 시간열과 정류장 행을 전환한다. 그리고 승차-하차 인원으로서 표현한다 그리고 '24시 이후', '합계', '6시 이전'은 삭제
     ''' 
     from: 2023년 1~8월 이용인원.csv
     return: pd.Dataframe
@@ -13,14 +14,16 @@ def make_passenger_csv():
     row_passenger_csv = pd.read_csv("./data/2023년 1~8월 이용인원.csv",index_col=0,encoding="UTF-8")
     subway_line_num = row_passenger_csv['호선']
     subway_line_num = subway_line_num.str.replace("호선","").astype(int)    # 몇호선에서 숫자만 남김
+
     
-    upside_downside = row_passenger_csv['구분']
-    upside_downside = upside_downside.replace("승차",0)
-    upside_downside = upside_downside.replace("하차",1)     # 승차를 0으로 하차를 1로 라벨링
-    
-    passenger_csv = row_passenger_csv.drop('역명',axis=1)   # 이미 라벨링 된 역명이 있기에 역명은 제거
+    passenger_csv = row_passenger_csv.drop(['역명','24시 이후','합 계','6시 이전'],axis=1)
     passenger_csv['호선'] = subway_line_num
-    passenger_csv['구분'] = upside_downside
+    
+    passenger_indexs = np.unique(row_passenger_csv.index)
+    full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h')
+    
+    new_passenger_csv = pd.DataFrame(indexs=full_time_list)
+    
     return passenger_csv
 
 def make_transfer_csv():
@@ -32,8 +35,8 @@ def make_transfer_csv():
     각종 이용객 유형을 제거하고 단순 이용객 수로 합쳤습니다
     !! 이미 파일이 존재하면 그냥 읽어서 반환하기에 변경사항 있으면 유의할 것
     '''
-    # if os.path.exists('./data/trasfer_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-    #     return pd.read_pickle('./data/trasfer_list.pkl')
+    if os.path.exists('./data/trasfer_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+        return pd.read_pickle('./data/trasfer_list.pkl')
     
     row_transfer_csv = pd.read_csv("./data/서울교통공사_1_8호선 역별 일별 승객유형별 수송인원(환승유입인원 포함) 정보_20221231.csv",index_col=0,encoding="EUC-KR")
     
@@ -91,33 +94,43 @@ def make_delay_csv():
     # new_delay_csv = pd.DataFrame(columns=['지연시간대','1호선지연(분)','2호선지연(분)','3호선지연(분)','4호선지연(분)',
     #                                       '5호선지연(분)','6호선지연(분)','7호선지연(분)','8호선지연(분)'])
     
+    full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h')
+    time_label = ['첫차~09시','09시~18시','18시~막차']
+    label_trans = [
+        ['06:00:00', '07:00:00', '08:00:00'],
+        ['09:00:00', '10:00:00', '11:00:00', '12:00:00', '13:00:00',
+         '14:00:00', '15:00:00', '16:00:00', '17:00:00', '18:00:00'],
+        ['19:00:00', '20:00:00', '21:00:00', '22:00:00', '23:00:00'],
+        ['00:00:00', '01:00:00', '02:00:00', '03:00:00', '04:00:00',
+         '05:00:00']
+    ]
+    
+    line_list = ['1호선지연(분)','2호선지연(분)','3호선지연(분)','4호선지연(분)',
+                '5호선지연(분)','6호선지연(분)','7호선지연(분)','8호선지연(분)']
+    new_delay_csv = pd.DataFrame(index=full_time_list, columns=line_list).fillna(0)
+    
     date_list = np.unique(row_delay_csv['지연일자'])
     subway_line_list = np.unique(row_delay_csv['노선'])
     time_list = np.unique(row_delay_csv['지연시간대'])
     
-    new_delay_csv = pd.DataFrame()
     for date in date_list:
         split_by_date = row_delay_csv[row_delay_csv["지연일자"] == date].copy()
         for subway_line in subway_line_list:
             split_by_line = split_by_date[split_by_date["노선"] == subway_line].copy()
-            for time_num in time_list:
+            # print(split_by_line)
+            for idx, time_num in enumerate(time_label):    # 라벨만큼 즉 날짜당 3개를 만들고 거기에 지연 데이터 합산을 저장한다, 항상 덮어쓰기를할까..
                 temp_data = split_by_line[split_by_line["지연시간대"] == time_num].copy()
-                if temp_data.shape[0] == 0:
-                    continue
-                delay_time = temp_data['최대지연시간'].max()
-                delay_time = delay_time.split()[0]
+
+                if len(temp_data) != 0: 
+                    delay_time = temp_data['최대지연시간'].max()
+                    delay_time = delay_time.split()[0]
+                    delay_time = int(delay_time[:-1])
+                    for time in label_trans[idx]:
+                        row = date+" "+time
+                        new_delay_csv.loc[row,line_list[subway_line-1]] = delay_time
                 
-                data = pd.DataFrame({'지연일자':[date],'지연시간대':[time_num],})
-                for i in range(1,9):
-                    if i == subway_line:
-                        data[f'{i}호선지연(분)'] = int(delay_time[:-1])
-                    else:
-                        data[f'{i}호선지연(분)'] = 0
-                  
-                new_delay_csv = pd.concat([new_delay_csv,data])
-    
-    new_delay_csv = new_delay_csv.set_index(keys='지연일자')
-    new_delay_csv.to_pickle('./data/delay_list.pkl')
+    new_delay_csv.to_pickle('./data/test_delay_list.pkl')
+    # new_delay_csv.to_csv('./data/test_delay_list.csv')
     
     return new_delay_csv
 
@@ -138,25 +151,56 @@ def make_weather_csv():
        '10cm 지중온도(°C)', '20cm 지중온도(°C)', '30cm 지중온도(°C)'],axis=1)
     row_weather_csv = row_weather_csv.fillna(0)
     row_weather_csv = row_weather_csv.astype(float)
+    row_weather_csv = row_weather_csv.loc[:'2023-08-31 23:00:00']
     return row_weather_csv
+
+def make_bus_csv():
+    row_bus_csv = pd.read_csv("./data/2023년1~8월 일별 버스 이용객수2.csv",index_col=0)
+    cols = row_bus_csv.columns
+    full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h').astype(str)
+    new_bus_csv = pd.DataFrame(index=full_time_list,columns=cols[1:])
+    hour_list = [
+        '00:00:00', '01:00:00', '02:00:00', '03:00:00', '04:00:00',
+        '05:00:00', '06:00:00', '07:00:00', '08:00:00',
+        '09:00:00', '10:00:00', '11:00:00', '12:00:00', '13:00:00',
+        '14:00:00', '15:00:00', '16:00:00', '17:00:00', '18:00:00',
+        '19:00:00', '20:00:00', '21:00:00', '22:00:00', '23:00:00',]
+    
+    for data in row_bus_csv.values:
+        day = str(data[0])
+        data = data[1:]
+        year = day[:4]
+        month = day[4:6]
+        day = day[6:]
+        # print(year, month, day)
+        for hour in hour_list:
+            date = f"{year}-{month}-{day} "+hour
+            new_bus_csv.loc[date] = data
+        
+    return new_bus_csv
 
 def scaling():
     pass
 
 if __name__ == "__main__":
     passenger_csv = make_passenger_csv()
-    transfer_csv = make_transfer_csv()
+    # transfer_csv = make_transfer_csv()
     delay_csv = make_delay_csv()
     weather_csv = make_weather_csv()
+    bus_csv = make_bus_csv()
     
-    print(passenger_csv.shape,transfer_csv.shape,delay_csv.shape,weather_csv.shape)
-    # (132598, 25) (99608, 3) (671, 9) (8760, 3)
-    print(len(np.unique(passenger_csv['역번호'])))  # 282
-    print(len(np.unique(transfer_csv['역번호'])))  # 282
+    print(passenger_csv.shape,delay_csv.shape,weather_csv.shape, bus_csv.shape)
+    # (132598, 25) (5832, 8) (5832, 3) (5832, 2)
+    print(passenger_csv.head)
     
-    station_of_passenger = np.unique(passenger_csv['역번호'])
-    station_of_transfer = np.unique(transfer_csv['역번호'])
-    for i in station_of_transfer:           # 서로 다른 역 데이터가 있는지 확인
-        if i not in station_of_passenger:
-            print(i)    # 2754, 2761
+    '''
+    같은 날자-시간 즉 시간단위로 인덱스를 잡고
+    정류장의 경우 옆 컬럼으로서 늘려서 해결한다
+    
+    최종적으로 모두 weather 행 개수에 맞춰져야(단 00시~04시는 잘라내고)
+    passenger   : 일단위에서 시간단위로 바꾸기, 정류장 행이 아니라 컬럼으로 바꾸기
+    delay       : 반나절단위에서 시간단위로 바꾸기, 정류장 칼럼으로 바꾸기
+    weather     : 00~04시 잘라내기
+    bus         : 시간단위로 바꾸기
+    '''
             
