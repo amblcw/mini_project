@@ -153,8 +153,28 @@ def make_weather_csv():
 
 def make_bus_csv():
     row_bus_csv = pd.read_csv("./data/2023년1~8월 일별 버스 이용객수2.csv",index_col=0)
-    # print(row_bus_csv.head)
-    return row_bus_csv
+    cols = row_bus_csv.columns
+    full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h').astype(str)
+    new_bus_csv = pd.DataFrame(index=full_time_list,columns=cols[1:])
+    hour_list = [
+        '00:00:00', '01:00:00', '02:00:00', '03:00:00', '04:00:00',
+        '05:00:00', '06:00:00', '07:00:00', '08:00:00',
+        '09:00:00', '10:00:00', '11:00:00', '12:00:00', '13:00:00',
+        '14:00:00', '15:00:00', '16:00:00', '17:00:00', '18:00:00',
+        '19:00:00', '20:00:00', '21:00:00', '22:00:00', '23:00:00',]
+    
+    for data in row_bus_csv.values:
+        day = str(data[0])
+        data = data[1:]
+        year = day[:4]
+        month = day[4:6]
+        day = day[6:]
+        # print(year, month, day)
+        for hour in hour_list:
+            date = f"{year}-{month}-{day} "+hour
+            new_bus_csv.loc[date] = data
+        
+    return new_bus_csv
 
 def scaling():
     pass
@@ -219,7 +239,7 @@ if __name__ == "__main__":
     bus_csv = make_bus_csv()
     
     print(passenger_csv.shape,delay_csv.shape,weather_csv.shape, bus_csv.shape)
-    # (132598, 25) (5832, 8) (5832, 3) (242, 3)
+    # (132598, 25) (5832, 8) (5832, 3) (5832, 2)
 
     
     '''
@@ -233,12 +253,3 @@ if __name__ == "__main__":
     bus         : 시간단위로 바꾸기
     '''
             
-            
-    # make_bus_csv()
-    # print(len(weather_csv[weather_csv['강수량(mm)'] != 0.0]))   # 632
-    # print(delay_csv[:10])
-    # print(passenger_csv.head)
-    delay_csv.to_csv('./data/old_delay.csv')
-    # new_delay_csv = extend_delay_csv(delay_csv)
-    # print(new_delay_csv[9:20])
-    # new_delay_csv.to_csv('./data/new_delay.csv')
