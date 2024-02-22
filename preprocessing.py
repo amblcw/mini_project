@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import os.path
+import datetime as dt
 
 def make_passenger_csv():
     ''' 
@@ -95,26 +96,33 @@ def make_delay_csv():
     subway_line_list = np.unique(row_delay_csv['노선'])
     time_list = np.unique(row_delay_csv['지연시간대'])
     
+    time_label = ['첫차~09시','09시~18시','18시~막차']
+    
     new_delay_csv = pd.DataFrame()
     for date in date_list:
         split_by_date = row_delay_csv[row_delay_csv["지연일자"] == date].copy()
         for subway_line in subway_line_list:
             split_by_line = split_by_date[split_by_date["노선"] == subway_line].copy()
-            for time_num in time_list:
-                temp_data = split_by_line[split_by_line["지연시간대"] == time_num].copy()
-                if temp_data.shape[0] == 0:
-                    continue
-                delay_time = temp_data['최대지연시간'].max()
-                delay_time = delay_time.split()[0]
+            
+            for label in time_label:
+                pass
+            # for time_num in time_list:
+            #     temp_data = split_by_line[split_by_line["지연시간대"] == time_num].copy()
+            #     if temp_data.shape[0] == 0:
+            #         continue
+            #     delay_time = temp_data['최대지연시간'].max()
+            #     delay_time = delay_time.split()[0]
+            #     delay_time = int(delay_time[:-1])
+            #     data = pd.DataFrame({'지연일자':[date],'지연시간대':[time_num],})
                 
-                data = pd.DataFrame({'지연일자':[date],'지연시간대':[time_num],})
-                for i in range(1,9):
-                    if i == subway_line:
-                        data[f'{i}호선지연(분)'] = int(delay_time[:-1])
-                    else:
-                        data[f'{i}호선지연(분)'] = 0
+            #     for i in range(1,9):
+            #         if i == subway_line:
+            #             data[f'{i}호선지연(분)'] = delay_time
+            #         else:
+            #             data[f'{i}호선지연(분)'] = 0
+            #     # data['지연호선과지연시간'] = [(subway_line,delay_time)]
                   
-                new_delay_csv = pd.concat([new_delay_csv,data])
+            #     new_delay_csv = pd.concat([new_delay_csv,data])
     
     new_delay_csv = new_delay_csv.set_index(keys='지연일자')
     new_delay_csv.to_pickle('./data/delay_list.pkl')
@@ -148,6 +156,58 @@ def make_bus_csv():
 def scaling():
     pass
 
+def extend_delay_csv(dataset) -> pd.DataFrame: # 어느순간부터 입력이 안됨
+    
+    full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h')
+    # day_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00")
+    delay_idx_list = dataset.index
+    # print(day_time_list)
+    # print(dataset.head)
+    time_label = ['첫차~09시','09시~18시','18시~막차']
+    label_trans = [
+        ['05:00:00', '06:00:00', '07:00:00', '08:00:00'],
+        ['09:00:00', '10:00:00', '11:00:00', '12:00:00', '13:00:00',
+         '14:00:00', '15:00:00', '16:00:00', '17:00:00', '18:00:00'],
+        ['19:00:00', '20:00:00', '21:00:00', '22:00:00', '23:00:00'],
+        ['00:00:00', '01:00:00', '02:00:00', '03:00:00', '04:00:00']
+    ]
+    
+    new_delay_csv = pd.DataFrame(index=full_time_list, columns=dataset.columns[1:])
+    # print(new_delay_csv.head)
+    
+    # 다 갈아엎기 | 날자 -> old_delay_csv로 순회하면서 old_delay_csv에 해당하는 날자가 없으면 0으로 채우고 있으면 old_delay_csv 날자가 바뀔때까지 진행하면서 데이터에 맞춰서 값을 채워넣기..
+    # 아니다 이거 갈어엎지 말고 old_delay_Csv를 고치자
+    dataset_idx = 0 
+    is_delayed_day = False
+    for day_time in full_time_list:
+        day, time = str(day_time).split()
+        delay_day = delay_idx_list[dataset_idx]
+        print('day, time:', day, time)
+
+        if day == delay_day:
+            data = dataset.iloc[dataset_idx]
+            print("data",data)
+            delay_time = data['지연시간대']
+            delay_time = label_trans[time_label.index(delay_time)]
+            if time in delay_time:
+                new_delay_csv.loc[day_time] = data.drop(['지연시간대'])
+                if time == delay_time[-1]:
+                    dataset_idx += 1
+            else:
+                # if is_delayed_day:
+                #     is_delayed_day = False
+                new_delay_csv.loc[day_time].fillna(0, inplace=True)
+        else:
+            new_delay_csv.loc[day_time].fillna(0, inplace=True)
+            # if is_delayed_day and time == '23:00:00':
+            #     dataset_idx += 1
+            #     print("next day",dataset_idx)
+                
+        if dataset_idx >= 5:
+            break
+    
+    return new_delay_csv
+
 if __name__ == "__main__":
     passenger_csv = make_passenger_csv()
     # transfer_csv = make_transfer_csv()
@@ -168,5 +228,12 @@ if __name__ == "__main__":
     bus         : 시간단위로 바꾸기
     '''
             
+            
     # make_bus_csv()
-    print(len(weather_csv[weather_csv['강수량(mm)'] != 0.0]))   # 632
+    # print(len(weather_csv[weather_csv['강수량(mm)'] != 0.0]))   # 632
+    # print(delay_csv[:10])
+    # print(passenger_csv.head)
+    delay_csv.to_csv('./data/old_delay.csv')
+    new_delay_csv = extend_delay_csv(delay_csv)
+    # print(new_delay_csv[9:20])
+    new_delay_csv.to_csv('./data/new_delay.csv')
