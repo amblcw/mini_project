@@ -92,40 +92,44 @@ def make_delay_csv():
     # new_delay_csv = pd.DataFrame(columns=['지연시간대','1호선지연(분)','2호선지연(분)','3호선지연(분)','4호선지연(분)',
     #                                       '5호선지연(분)','6호선지연(분)','7호선지연(분)','8호선지연(분)'])
     
+    full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h')
+    time_label = ['첫차~09시','09시~18시','18시~막차']
+    label_trans = [
+        ['05:00:00', '06:00:00', '07:00:00', '08:00:00'],
+        ['09:00:00', '10:00:00', '11:00:00', '12:00:00', '13:00:00',
+         '14:00:00', '15:00:00', '16:00:00', '17:00:00', '18:00:00'],
+        ['19:00:00', '20:00:00', '21:00:00', '22:00:00', '23:00:00'],
+        ['00:00:00', '01:00:00', '02:00:00', '03:00:00', '04:00:00']
+    ]
+    
+    line_list = ['1호선지연(분)','2호선지연(분)','3호선지연(분)','4호선지연(분)',
+                '5호선지연(분)','6호선지연(분)','7호선지연(분)','8호선지연(분)']
+    new_delay_csv = pd.DataFrame(index=full_time_list, columns=line_list).fillna(0)
+    
+    print(new_delay_csv[:20])
+    
     date_list = np.unique(row_delay_csv['지연일자'])
     subway_line_list = np.unique(row_delay_csv['노선'])
     time_list = np.unique(row_delay_csv['지연시간대'])
     
-    time_label = ['첫차~09시','09시~18시','18시~막차']
-    
-    new_delay_csv = pd.DataFrame()
     for date in date_list:
         split_by_date = row_delay_csv[row_delay_csv["지연일자"] == date].copy()
         for subway_line in subway_line_list:
             split_by_line = split_by_date[split_by_date["노선"] == subway_line].copy()
-            
-            for label in time_label:
-                pass
-            # for time_num in time_list:
-            #     temp_data = split_by_line[split_by_line["지연시간대"] == time_num].copy()
-            #     if temp_data.shape[0] == 0:
-            #         continue
-            #     delay_time = temp_data['최대지연시간'].max()
-            #     delay_time = delay_time.split()[0]
-            #     delay_time = int(delay_time[:-1])
-            #     data = pd.DataFrame({'지연일자':[date],'지연시간대':[time_num],})
+            # print(split_by_line)
+            for idx, time_num in enumerate(time_label):    # 라벨만큼 즉 날짜당 3개를 만들고 거기에 지연 데이터 합산을 저장한다, 항상 덮어쓰기를할까..
+                temp_data = split_by_line[split_by_line["지연시간대"] == time_num].copy()
+
+                if len(temp_data) != 0: 
+                    delay_time = temp_data['최대지연시간'].max()
+                    delay_time = delay_time.split()[0]
+                    delay_time = int(delay_time[:-1])
+                    for time in label_trans[idx]:
+                        row = date+" "+time
+                        new_delay_csv.loc[row,line_list[subway_line-1]] = delay_time
                 
-            #     for i in range(1,9):
-            #         if i == subway_line:
-            #             data[f'{i}호선지연(분)'] = delay_time
-            #         else:
-            #             data[f'{i}호선지연(분)'] = 0
-            #     # data['지연호선과지연시간'] = [(subway_line,delay_time)]
-                  
-            #     new_delay_csv = pd.concat([new_delay_csv,data])
-    
-    new_delay_csv = new_delay_csv.set_index(keys='지연일자')
-    new_delay_csv.to_pickle('./data/delay_list.pkl')
+    new_delay_csv.to_pickle('./data/test_delay_list.pkl')
+    # new_delay_csv.to_csv('./data/test_delay_list.csv')
     
     return new_delay_csv
 
@@ -234,6 +238,6 @@ if __name__ == "__main__":
     # print(delay_csv[:10])
     # print(passenger_csv.head)
     delay_csv.to_csv('./data/old_delay.csv')
-    new_delay_csv = extend_delay_csv(delay_csv)
+    # new_delay_csv = extend_delay_csv(delay_csv)
     # print(new_delay_csv[9:20])
-    new_delay_csv.to_csv('./data/new_delay.csv')
+    # new_delay_csv.to_csv('./data/new_delay.csv')
