@@ -219,7 +219,7 @@ def load_passenger():
     
     return passenger_csv
 
-def load_deay():
+def load_delay():
     delay_csv = make_delay_csv()
     
     return delay_csv

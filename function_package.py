@@ -119,7 +119,6 @@ def split_xy(dataset:pd.DataFrame,time_step,y_col='None'):
     result_y = []
     if y_col == 'None':
         time_step += 1  # y까지 포함해서 잘라야하기에 +1
-        print("is enter?")
     else:
         num += 1        # y들어갈거 생각하면 1칸 비워줘야하기에
 

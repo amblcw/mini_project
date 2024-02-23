@@ -8,7 +8,7 @@ import os
 import pandas as pd
 import numpy as np
 from torchvision.io import read_image
-from preprocessing import load_bus
+from preprocessing import load_bus, load_delay
 from function_package import split_xy
 from sklearn.metrics import r2_score
 from torcheval.metrics import R2Score
@@ -19,11 +19,15 @@ print(torch.__version__)    # 2.2.0+cu118
 # y = np.array([4,5,6,7,8,9,10]).astype(np.float32)
 # print(x.shape,y.shape) # (7, 3, 1) (7,)
 
-bus_csv = load_bus()
-print(bus_csv.shape)
-x, y = split_xy(bus_csv,10)
-print(x.shape, y.shape)
-print(y[:10])
+# bus_csv = load_bus()
+# print(bus_csv.shape)
+# x, y = split_xy(bus_csv,100)
+# print(x.shape, y.shape)
+# print(y[:10])
+
+delay_csv = load_delay()
+x, y = split_xy(delay_csv,100)
+print(x.shape,y.shape)
 
 class CustomImageDataset(Dataset):
     def __init__(self,x_data,y_data,transform=None) -> None:    # 생성자, x,y데이터, 변환함수 설정
@@ -96,7 +100,7 @@ class MyLSTM(nn.Module):
         self.input_size  = input_shape[1]
         self.hidden_size = hidden_size
         self.seq_length  = input_shape[0]
-        
+        # self.conv1d = nn.Conv1d()
         self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
                             num_layers=num_layers, batch_first=True)
         self.fc = nn.Sequential(
@@ -104,10 +108,13 @@ class MyLSTM(nn.Module):
             nn.ReLU(),
             nn.Linear(128,64),
             nn.ReLU(),
+            nn.BatchNorm1d(64),
+            nn.Dropout(0.01),
             nn.Linear(64,32),
             nn.ReLU(),
             nn.Linear(32,16),
             nn.ReLU(),
+            nn.Dropout(0.01),
             nn.Linear(16,num_classes)
         )
     
@@ -120,7 +127,7 @@ class MyLSTM(nn.Module):
         return out
     
 # model = TorchLSTM(1,(3,1),1).to(device)
-model = MyLSTM(num_classes=1, input_shape=(10,2), hidden_size=32, num_layers=1).to(device)
+model = MyLSTM(num_classes=1, input_shape=(100,8), hidden_size=128, num_layers=1).to(device)
 
 loss_fn = nn.MSELoss()
 # loss_fn = nn.CrossEntropyLoss() # 이 함수에 softmax가 내재되어있기에 모델에서 softmax를 쓰면 안된다
@@ -133,6 +140,7 @@ def train(dataloader, model, loss_fn, optimizer, verbose=True):
         
         # 예측 오류 계산
         pred = model(X)
+        pred = pred.to(device)
         loss = loss_fn(pred, y)
         
         # 역전파
@@ -157,9 +165,10 @@ def test(dataloader, model, loss_fn):
             X, y = X.to(device), y.to(device)
             pred = model(X)
             pred = pred.reshape(-1)
+            pred = pred.to(device)
             test_loss += loss_fn(pred, y).item()
             metric = R2Score()
-            metric.update(pred,y)
+            metric.update(pred,y).to(device)
             r2 = metric.compute()
             
             correct += r2 #r2_score(pred, y)
