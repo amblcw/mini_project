@@ -5,7 +5,7 @@ import os.path
 import datetime as dt
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler
 
-def make_passenger_csv(): 
+def make_passenger_csv(path=None): 
     ''' 
     from: 2023년 1~8월 이용인원.csv
     return: pd.Dataframe
@@ -17,6 +17,8 @@ def make_passenger_csv():
         return pd.read_pickle('./data/passenger.pkl')
     
     row_passenger_csv = pd.read_csv("./data/2023년 1~8월 이용인원.csv",index_col=0,encoding="UTF-8")
+    if path != None:
+        row_passenger_csv = pd.read_csv(path,index_col=0,encoding="UTF-8")
     subway_line_num = row_passenger_csv['호선']
     subway_line_num = subway_line_num.str.replace("호선","").astype(int)    # 몇호선에서 숫자만 남김
 
@@ -82,7 +84,7 @@ def make_transfer_csv():
     transfer_list.to_pickle('./data/trasfer_list.pkl')
     return transfer_list
 
-def make_delay_csv():
+def make_delay_csv(path=None):
     '''
     from: 서울교통공사_노선별 지연시간 정보_20230831.csv
     return: pd.Dataframe
@@ -99,7 +101,8 @@ def make_delay_csv():
     #     return pd.read_pickle('./data/delay_list.pkl')       
     
     row_delay_csv = pd.read_csv('./data/서울교통공사_노선별 지연시간 정보_20230831.csv',index_col=0,encoding="EUC-KR")
-    
+    if path != None:
+        row_delay_csv = pd.read_csv(path,index_col=0,encoding="EUC-KR")
     subway_line_num = row_delay_csv['노선'].copy()
     subway_line_num = subway_line_num.str.replace("호선","")
     subway_line_num = subway_line_num.str.split()
@@ -150,8 +153,10 @@ def make_delay_csv():
     
     return new_delay_csv
 
-def make_weather_csv():
+def make_weather_csv(path=None):
     row_weather_csv = pd.read_csv('./data/SURFACE_ASOS_108_HR_2023_2023_2024.csv',index_col=1,encoding='EUC-KR')
+    if path != None:
+        row_weather_csv = pd.read_csv(path,index_col=1,encoding="EUC-KR")
     # print(row_weather_csv.columns)
     '''
     ['지점', '기온(°C)', '강수량(mm)', '풍속(m/s)', '풍향(16방위)', '습도(%)', '증기압(hPa)',
@@ -170,8 +175,10 @@ def make_weather_csv():
     row_weather_csv = row_weather_csv.loc[:'2023-08-31 23:00:00']
     return row_weather_csv
 
-def make_bus_csv():
+def make_bus_csv(path=None):
     row_bus_csv = pd.read_csv("./data/2023년1~8월 일별 버스 이용객수2.csv",index_col=0)
+    if path != None:
+        row_bus_csv = pd.read_csv(path,index_col=0)
     cols = row_bus_csv.columns
     full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h').astype(str)
     new_bus_csv = pd.DataFrame(index=full_time_list,columns=cols[1:])
