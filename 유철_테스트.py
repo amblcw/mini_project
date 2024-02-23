@@ -21,7 +21,7 @@ def weather_file_analyze():
     daily_rain_avg = weather_csv_filtered.groupby(weather_csv_filtered['일시'].dt.date)['강수량(mm)'].mean()
     
     return daily_rain_avg
-
+    
 # 함수를 호출하여 일별 강수량 평균을 얻습니다.
 daily_avg_rainfall = weather_file_analyze()
 print(daily_avg_rainfall)
