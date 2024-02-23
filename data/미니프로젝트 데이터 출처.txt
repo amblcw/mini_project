@@ -5,3 +5,6 @@ https://data.seoul.go.kr/dataList/OA-12914/S/1/datasetView.do#
 
 서울 기상데이터 (SURFACE_ASOS_108_HR_2023_2023_2024)
 https://data.kma.go.kr/data/grnd/selectAsosRltmList.do?pgmNo=36&tabNo=1
+
+서울 교통공사 자료실
+http://www.seoulmetro.co.kr/kr/board.do?menuIdx=548&bbsIdx=2216697
