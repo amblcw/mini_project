@@ -11,6 +11,9 @@ def make_passenger_csv():   # 일 단위로 자른다음 시간열과 정류장 
     
     지하철 이용 승하차 인원 데이터 프레임을 만드는 함수입니다(라벨 인코딩 포함)
     '''
+    if os.path.exists('./data/passenger.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+        return pd.read_pickle('./data/passenger.pkl')
+    
     row_passenger_csv = pd.read_csv("./data/2023년 1~8월 이용인원.csv",index_col=0,encoding="UTF-8")
     subway_line_num = row_passenger_csv['호선']
     subway_line_num = subway_line_num.str.replace("호선","").astype(int)    # 몇호선에서 숫자만 남김
@@ -19,12 +22,23 @@ def make_passenger_csv():   # 일 단위로 자른다음 시간열과 정류장 
     passenger_csv = row_passenger_csv.drop(['역명','24시 이후','합 계','6시 이전'],axis=1)
     passenger_csv['호선'] = subway_line_num
     
-    passenger_indexs = np.unique(row_passenger_csv.index)
-    full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h')
+    passenger_indexs = passenger_csv.index
+    full_time_list = pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h').astype(str)
+    station_list = np.unique(passenger_csv['역번호'])
     
-    new_passenger_csv = pd.DataFrame(indexs=full_time_list)
+    new_passenger_csv = pd.DataFrame(index=full_time_list, columns=station_list).fillna(0)
+    for idx, data in enumerate(passenger_csv.values):
+        is_ride = 1
+        station_num = data[1]
+        if data[2] == '하차':
+            is_ride = -1
+        for i, passenger in enumerate(data[3:]):
+            date = passenger_indexs[idx]
+            date = date + f" {i+5:0>2}:00:00"
+            new_passenger_csv.loc[date,station_num] += is_ride * passenger
     
-    return passenger_csv
+    new_passenger_csv.to_pickle('./data/passenger.pkl')
+    return new_passenger_csv
 
 def make_transfer_csv():
     '''
@@ -190,8 +204,9 @@ if __name__ == "__main__":
     bus_csv = make_bus_csv()
     
     print(passenger_csv.shape,delay_csv.shape,weather_csv.shape, bus_csv.shape)
-    # (132598, 25) (5832, 8) (5832, 3) (5832, 2)
-    print(passenger_csv.head)
+    # (5832, 282) (5832, 8) (5832, 3) (5832, 2)
+    # print(passenger_csv.head)
+    passenger_csv.to_csv('./data/test_passenger.csv')
     
     '''
     같은 날자-시간 즉 시간단위로 인덱스를 잡고
