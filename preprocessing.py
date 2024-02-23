@@ -203,8 +203,16 @@ def make_bus_csv(path=None):
     new_bus_csv = new_bus_csv.fillna(method='ffill')
     return new_bus_csv
 
-def scaling():
-    pass
+def scaling(dataset):
+    scaler = MaxAbsScaler()
+    for idx, label in enumerate(dataset):
+        data = np.array(dataset[label])
+        data = data.reshape(-1,1)
+        if idx == 0:
+            scaler.fit(data)
+        scaled_data = scaler.transform(data)
+        dataset[label] = scaled_data
+    return dataset
 
 def load_passenger():
     passenger_csv = make_passenger_csv()
@@ -223,12 +231,18 @@ def load_weather():
 
 def load_bus():
     bus_csv = make_bus_csv()
-    
+    bus_csv = scaling(bus_csv)
     return bus_csv
 
 if __name__ == "__main__":
     bus_csv = load_bus()
     print(bus_csv)
+    # passenger_csv = load_passenger()
+    # print(passenger_csv)
+    # delay_csv = load_deay()
+    # print(delay_csv)
+    # weather_csv = load_weather()
+    # print(weather_csv)
     
     '''
     같은 날자-시간 즉 시간단위로 인덱스를 잡고

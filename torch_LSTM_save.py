@@ -10,16 +10,20 @@ import numpy as np
 from torchvision.io import read_image
 from preprocessing import load_bus
 from function_package import split_xy
+from sklearn.metrics import r2_score
+from torcheval.metrics import R2Score
+
 print(torch.__version__)    # 2.2.0+cu118
 
-x = np.array([[1,2,3],[2,3,4],[3,4,5],[4,5,6],[5,6,7],[6,7,8],[7,8,9]]).reshape(-1,3,1)
-y = np.array([4,5,6,7,8,9,10]).astype(np.float32)
-print(x.shape,y.shape) # (7, 3, 1) (7,)
+# x = np.array([[1,2,3],[2,3,4],[3,4,5],[4,5,6],[5,6,7],[6,7,8],[7,8,9]]).reshape(-1,3,1)
+# y = np.array([4,5,6,7,8,9,10]).astype(np.float32)
+# print(x.shape,y.shape) # (7, 3, 1) (7,)
 
 bus_csv = load_bus()
 print(bus_csv.shape)
 x, y = split_xy(bus_csv,10)
 print(x.shape, y.shape)
+print(y[:10])
 
 class CustomImageDataset(Dataset):
     def __init__(self,x_data,y_data,transform=None) -> None:    # 생성자, x,y데이터, 변환함수 설정
@@ -47,7 +51,7 @@ import matplotlib.pyplot as plt
 
 training_data = CustomImageDataset(x,y) # 인스턴스 선언 및 데이터 지정
 
-BATCH_SIZE = 1
+BATCH_SIZE = 128
 train_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=True)  # 만든 커스텀 데이터를 iterator형식으로 변경
 test_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=True)
 
@@ -96,29 +100,33 @@ class MyLSTM(nn.Module):
         self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
                             num_layers=num_layers, batch_first=True)
         self.fc = nn.Sequential(
-            nn.Linear(hidden_size, 64),
+            nn.Linear(hidden_size, 128),
+            nn.ReLU(),
+            nn.Linear(128,64),
             nn.ReLU(),
             nn.Linear(64,32),
             nn.ReLU(),
-            nn.Linear(32,num_classes)
+            nn.Linear(32,16),
+            nn.ReLU(),
+            nn.Linear(16,num_classes)
         )
     
     def forward(self, x):
-        h_0 = torch.zeros(self.num_layers, BATCH_SIZE, self.hidden_size)
-        c_0 = torch.zeros(self.num_layers, BATCH_SIZE, self.hidden_size)
+        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         ula, (h_out, c_out) = self.lstm(x, (h_0,c_0))
         h_out = h_out.view(-1, self.hidden_size)   
         out = self.fc(h_out)
         return out
     
 # model = TorchLSTM(1,(3,1),1).to(device)
-model = MyLSTM(num_classes=1, input_shape=(3,1), hidden_size=32, num_layers=1).to(device)
+model = MyLSTM(num_classes=1, input_shape=(10,2), hidden_size=32, num_layers=1).to(device)
 
 loss_fn = nn.MSELoss()
 # loss_fn = nn.CrossEntropyLoss() # 이 함수에 softmax가 내재되어있기에 모델에서 softmax를 쓰면 안된다
 optimizer = torch.optim.Adam(model.parameters())
 
-def train(dataloader, model, loss_fn, optimizer):
+def train(dataloader, model, loss_fn, optimizer, verbose=True):
     size = len(dataloader.dataset)
     for batch, (X,y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -132,7 +140,7 @@ def train(dataloader, model, loss_fn, optimizer):
         loss.backward()         # 역전파 계산
         optimizer.step()        # 역전파 계산에 따라 파라미터 업데이트(이 시점에서 가중치가 업데이트 된다)
         
-        if batch % 100 == 0:
+        if (batch % 10 == 0) and verbose:
             loss, current = loss.item(), (batch+1)*len(X)
             print(f"loss: {loss:>7f} [{current:>5d}/{size:>5d}]")
             
@@ -142,32 +150,56 @@ def test(dataloader, model, loss_fn):
     # print("size check: ",size,num_batches) # size는 테스트 데이터의 개수, num_batches는 batch_size에 의해 몇 바퀴 도는지
     model.eval()    # 모델을 평가 모드로 전환, Dropout이나 BatchNomalization등을 비활성화
     test_loss, correct = 0, 0
+    
+    
     with torch.no_grad():
         for X, y in dataloader:
             X, y = X.to(device), y.to(device)
             pred = model(X)
+            pred = pred.reshape(-1)
             test_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item() 
+            metric = R2Score()
+            metric.update(pred,y)
+            r2 = metric.compute()
+            
+            correct += r2 #r2_score(pred, y)
             # 예측값을 argmax로 확실한 정수로 만들고 정답과 비교해서 참 거짓을 만든다, 그리고 float으로 만든뒤 다 더해서 최종적으로 모든 데이터에서 정답값의 개수를 얻게된다
     test_loss /= num_batches    # 그렇게 얻은 총 정답개수를 전체 데이터 개수로 다 나누면 그게 곧 acc가 된다
-    correct /= size
-    print(f"Test Error \n Accuracy: {(100*correct):>0.2f}%, Avg loss: {test_loss:>8f}\n")
+    correct /= num_batches
+    print(f"Test Error \n R2: {(correct):>0.4f}, Avg loss: {test_loss:>8f}\n")
+    return test_loss
     
 if __name__ == '__main__':
     print(f"Using {device} device")
     print(model)
     
     EPOCHS = 500
+    best_loss = 987654321
+    patience_count = 0
     for t in range(EPOCHS):
         print(f"Epoch {t+1}\n---------------------")
-        train(train_dataloader, model, loss_fn, optimizer)
-        test(test_dataloader, model, loss_fn)
-    print("Done")
+        train(train_dataloader, model, loss_fn, optimizer,verbose=False)
+        loss = test(test_dataloader, model, loss_fn)
+        if loss < best_loss:
+            best_loss = loss
+            patience_count = 0
+        else:
+            patience_count += 1
+            
+        if patience_count >= 100:
+            print("Early Stopped")
+            break
 
-    with torch.no_grad():
-        x = torch.FloatTensor([1,2,3]).reshape(1,3,1)
-        pred = model(x)
-        print(f"{x} Predicted: {pred}")
+    print("Best loss: ",best_loss)
+    print("Done")
+    
+    # print(x[:10],y[:10])
+    # with torch.no_grad():
+    #     model.eval()
+    #     pred = model(x)
+    #     metric = R2Score()
+    #     metric.update(x,y)
+    #     metric.compute()
     # import os
     # dir_path = os.getcwd()
     # print(dir_path)

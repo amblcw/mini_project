@@ -113,20 +113,26 @@ def split_xy(dataset:pd.DataFrame,time_step,y_col='None'):
     '''
     아직 시계열 데이터 등에 대한건 더 개선 필요
     '''
+    dataset = dataset.astype(np.float32)
     dataset = dataset.to_numpy()
-    result = np.array([]).reshape(dataset.shape)
+    result = np.array([])
     result_y = []
-    num = len(dataset) - time_step + 1
     if y_col == 'None':
         time_step += 1  # y까지 포함해서 잘라야하기에 +1
+        print("is enter?")
     else:
         num += 1        # y들어갈거 생각하면 1칸 비워줘야하기에
 
+    num = len(dataset) - time_step + 1
     if num <= 0: # 자르는 것이 불가능한 time_step이 들어온 경우
         raise Exception(f"time_step:{time_step}이 너무 큽니다")
-    
-    for i in range(num):
-        result.append(dataset[i : i+time_step])
+    # print(num)
+    for idx, i in enumerate(range(num)):
+        if idx == 0:
+            result = np.array([dataset[i : i+time_step]])
+            continue
+        # print(f"{idx}번째 result: ",result.shape)
+        result = np.concatenate([result, np.array([dataset[i : i+time_step]])],axis=0)
     
     # result = np.array(result)    
     
