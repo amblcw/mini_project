@@ -8,11 +8,18 @@ import os
 import pandas as pd
 import numpy as np
 from torchvision.io import read_image
+from preprocessing import load_bus
+from function_package import split_xy
 print(torch.__version__)    # 2.2.0+cu118
 
 x = np.array([[1,2,3],[2,3,4],[3,4,5],[4,5,6],[5,6,7],[6,7,8],[7,8,9]]).reshape(-1,3,1)
 y = np.array([4,5,6,7,8,9,10]).astype(np.float32)
 print(x.shape,y.shape) # (7, 3, 1) (7,)
+
+bus_csv = load_bus()
+print(bus_csv.shape)
+x, y = split_xy(bus_csv,10)
+print(x.shape, y.shape)
 
 class CustomImageDataset(Dataset):
     def __init__(self,x_data,y_data,transform=None) -> None:    # 생성자, x,y데이터, 변환함수 설정
@@ -150,7 +157,7 @@ if __name__ == '__main__':
     print(f"Using {device} device")
     print(model)
     
-    EPOCHS = 50
+    EPOCHS = 500
     for t in range(EPOCHS):
         print(f"Epoch {t+1}\n---------------------")
         train(train_dataloader, model, loss_fn, optimizer)

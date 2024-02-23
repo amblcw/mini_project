@@ -199,7 +199,8 @@ def make_bus_csv(path=None):
         for hour in hour_list:
             date = f"{year}-{month}-{day} "+hour
             new_bus_csv.loc[date] = data
-        
+    
+    new_bus_csv = new_bus_csv.fillna(method='ffill')
     return new_bus_csv
 
 def scaling():
@@ -226,16 +227,8 @@ def load_bus():
     return bus_csv
 
 if __name__ == "__main__":
-    passenger_csv = make_passenger_csv()
-    # transfer_csv = make_transfer_csv()
-    delay_csv = make_delay_csv()
-    weather_csv = make_weather_csv()
-    bus_csv = make_bus_csv()
-    
-    print(passenger_csv.shape,delay_csv.shape,weather_csv.shape, bus_csv.shape)
-    # (5832, 282) (5832, 8) (5832, 3) (5832, 2)
-    # print(passenger_csv.head)
-    passenger_csv.to_csv('./data/test_passenger.csv')
+    bus_csv = load_bus()
+    print(bus_csv)
     
     '''
     같은 날자-시간 즉 시간단위로 인덱스를 잡고
