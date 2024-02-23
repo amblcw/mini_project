@@ -3,13 +3,15 @@ import numpy as np
 import pickle
 import os.path
 import datetime as dt
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler
 
-def make_passenger_csv():   # 일 단위로 자른다음 시간열과 정류장 행을 전환한다. 그리고 승차-하차 인원으로서 표현한다 그리고 '24시 이후', '합계', '6시 이전'은 삭제
+def make_passenger_csv(): 
     ''' 
     from: 2023년 1~8월 이용인원.csv
     return: pd.Dataframe
     
     지하철 이용 승하차 인원 데이터 프레임을 만드는 함수입니다(라벨 인코딩 포함)
+    일 단위로 자른다음 시간열과 정류장 행을 전환한다. 그리고 승차-하차 인원으로서 표현한다 그리고 '24시 이후', '합계', '6시 이전'은 삭제
     '''
     if os.path.exists('./data/passenger.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
         return pd.read_pickle('./data/passenger.pkl')
@@ -195,6 +197,26 @@ def make_bus_csv():
 
 def scaling():
     pass
+
+def load_passenger():
+    passenger_csv = make_passenger_csv()
+    
+    return passenger_csv
+
+def load_deay():
+    delay_csv = make_delay_csv()
+    
+    return delay_csv
+
+def load_weather():
+    weather_csv = make_weather_csv()
+    
+    return weather_csv
+
+def load_bus():
+    bus_csv = make_bus_csv()
+    
+    return bus_csv
 
 if __name__ == "__main__":
     passenger_csv = make_passenger_csv()
