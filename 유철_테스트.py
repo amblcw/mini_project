@@ -25,3 +25,4 @@ def weather_file_analyze():
 # 함수를 호출하여 일별 강수량 평균을 얻습니다.
 daily_avg_rainfall = weather_file_analyze()
 print(daily_avg_rainfall)
+  
