@@ -8,10 +8,11 @@ import os
 import pandas as pd
 import numpy as np
 from torchvision.io import read_image
-from preprocessing import load_bus, load_delay
+from preprocessing import load_bus, load_delay, load_passenger, load_weather
 from function_package import split_xy
 from sklearn.metrics import r2_score
 from torcheval.metrics import R2Score
+import copy
 
 print(torch.__version__)    # 2.2.0+cu118
 
@@ -25,9 +26,18 @@ print(torch.__version__)    # 2.2.0+cu118
 # print(x.shape, y.shape)
 # print(y[:10])
 
-delay_csv = load_delay()
-x, y = split_xy(delay_csv,100)
+# delay_csv = load_delay()
+# x, y = split_xy(delay_csv,100)
+
+passenger_csv = load_passenger()
+x, y = split_xy(passenger_csv,24)
 print(x.shape,y.shape)
+
+np.save('./data/temp_x.npz',x)
+np.save('./data/temp_y.npz',y)
+
+x = np.load('./data/temp_x.npz')
+y = np.load('./data/temp_y.npz')
 
 class CustomImageDataset(Dataset):
     def __init__(self,x_data,y_data,transform=None) -> None:    # 생성자, x,y데이터, 변환함수 설정
@@ -100,8 +110,10 @@ class MyLSTM(nn.Module):
         self.input_size  = input_shape[1]
         self.hidden_size = hidden_size
         self.seq_length  = input_shape[0]
-        # self.conv1d = nn.Conv1d()
-        self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
+        # self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
+        #                     num_layers=num_layers, batch_first=True)
+        self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.lstm = nn.LSTM(input_size=8, hidden_size=hidden_size,
                             num_layers=num_layers, batch_first=True)
         self.fc = nn.Sequential(
             nn.Linear(hidden_size, 128),
@@ -112,13 +124,14 @@ class MyLSTM(nn.Module):
             nn.Dropout(0.01),
             nn.Linear(64,32),
             nn.ReLU(),
-            nn.Linear(32,16),
-            nn.ReLU(),
+            # nn.Linear(32,16),
+            # nn.ReLU(),
             nn.Dropout(0.01),
-            nn.Linear(16,num_classes)
+            nn.Linear(32,num_classes)
         )
     
     def forward(self, x):
+        x = self.conv1d(x)
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         ula, (h_out, c_out) = self.lstm(x, (h_0,c_0))
@@ -127,7 +140,7 @@ class MyLSTM(nn.Module):
         return out
     
 # model = TorchLSTM(1,(3,1),1).to(device)
-model = MyLSTM(num_classes=1, input_shape=(100,8), hidden_size=128, num_layers=1).to(device)
+model = MyLSTM(num_classes=1, input_shape=(x.size(1),x.size(2)), hidden_size=128, num_layers=1).to(device)
 
 loss_fn = nn.MSELoss()
 # loss_fn = nn.CrossEntropyLoss() # 이 함수에 softmax가 내재되어있기에 모델에서 softmax를 쓰면 안된다
@@ -171,9 +184,8 @@ def test(dataloader, model, loss_fn):
             metric.update(pred,y).to(device)
             r2 = metric.compute()
             
-            correct += r2 #r2_score(pred, y)
-            # 예측값을 argmax로 확실한 정수로 만들고 정답과 비교해서 참 거짓을 만든다, 그리고 float으로 만든뒤 다 더해서 최종적으로 모든 데이터에서 정답값의 개수를 얻게된다
-    test_loss /= num_batches    # 그렇게 얻은 총 정답개수를 전체 데이터 개수로 다 나누면 그게 곧 acc가 된다
+            correct += r2 
+    test_loss /= num_batches    
     correct /= num_batches
     print(f"Test Error \n R2: {(correct):>0.4f}, Avg loss: {test_loss:>8f}\n")
     return test_loss
@@ -184,6 +196,7 @@ if __name__ == '__main__':
     
     EPOCHS = 500
     best_loss = 987654321
+    best_model = None
     patience_count = 0
     for t in range(EPOCHS):
         print(f"Epoch {t+1}\n---------------------")
@@ -191,6 +204,7 @@ if __name__ == '__main__':
         loss = test(test_dataloader, model, loss_fn)
         if loss < best_loss:
             best_loss = loss
+            best_model = copy.deepcopy(model)   # restore best weight 구현
             patience_count = 0
         else:
             patience_count += 1
@@ -199,6 +213,8 @@ if __name__ == '__main__':
             print("Early Stopped")
             break
 
+    print("===== best model =====")
+    test(test_dataloader,best_model,loss_fn)
     print("Best loss: ",best_loss)
     print("Done")
     
