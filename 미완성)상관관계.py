@@ -15,11 +15,6 @@ def passenger_bus_delay_corr():
     
     new_passenger = pd.DataFrame()
     
-    # temp1 = pd.Series(org[cols[0]]+org[cols[1]]+org[cols[2]]+org[cols[3]]+
-    #                   org[cols[4]]+org[cols[5]]+org[cols[6]]+org[cols[7]]+
-    #                   org[cols[8]]+org[cols[9]])
-    # temp1 = round(temp1/10)
-
 
     temp1 = pd.Series(sum(org[col] for col in cols[:10]))
     temp1 = round(temp1/10)
@@ -56,21 +51,19 @@ def passenger_bus_delay_corr():
 
 
     # print(cols[264:282])
-    print(new_passenger.tail(10))    
+    # print(new_passenger.tail(24))    
+
     
-passenger_bus_delay_corr()    
-    
-    
-    
-    
-    
-"""
+    # passenger_bus_delay_corr()    
+
+
+
     bus_data = make_bus_csv()
     # 첫 번째와 두 번째 열을 삭제하기
     bus_data = bus_data.iloc[:, 2:]
     delay_data = make_delay_csv()
     
-    print(passenger_data.head(3))    
+    print(new_passenger.head(3))    
     print('='*100)
     print(bus_data.head(3))    
     print('='*100)
@@ -78,7 +71,7 @@ passenger_bus_delay_corr()
     print('='*100)
     
     # 전철, 지연시간 합치기
-    passenger_delay_data = pd.concat([passenger_data, delay_data], axis=1)
+    passenger_delay_data = pd.concat([new_passenger, delay_data], axis=1)
     
     # 버스, 지연시간 합치기
     bus_delay_data = pd.concat([bus_data, delay_data], axis=1)
@@ -93,6 +86,8 @@ passenger_bus_delay_corr()
     print("버스 상관관계 상위 5 행 :\n", bus_matrix.head(5))    
     
     return passenger_matrix, bus_matrix
+
+
 
 def plot_correlation_heatmap(passenger_matrix, bus_matrix):
     from matplotlib import font_manager, rc
@@ -131,4 +126,3 @@ passenger_matrix, bus_matrix = passenger_bus_delay_corr()
 
 # 시각화
 plot_correlation_heatmap(passenger_matrix, bus_matrix)
-"""
