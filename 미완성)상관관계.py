@@ -10,24 +10,53 @@ def passenger_bus_delay_corr():
     셋 데이터의 상관관계
     '''
     org = make_passenger_csv()
-    
+    print(org.tail(3))
     cols = org.columns 
     
     new_passenger = pd.DataFrame()
     
-    # temp1 = pd.Series(org[cols[0]]+org[cols[1]])
-    # new_passenger['1호선'] = temp1
+    # temp1 = pd.Series(org[cols[0]]+org[cols[1]]+org[cols[2]]+org[cols[3]]+
+    #                   org[cols[4]]+org[cols[5]]+org[cols[6]]+org[cols[7]]+
+    #                   org[cols[8]]+org[cols[9]])
+    # temp1 = round(temp1/10)
+
+
+    temp1 = pd.Series(sum(org[col] for col in cols[:10]))
+    temp1 = round(temp1/10)
+
+    temp2 = pd.Series(sum(org[col] for col in cols[10:60]))
+    temp2 = round(temp1/50)
     
-    temp1 = pd.Series(org[cols[0]])
+    temp3 = pd.Series(sum(org[col] for col in cols[60:94]))
+    temp3 = round(temp1/34)
     
-    for i in range(10, len(cols)):
-        temp1 += org[cols[i]]
+    temp4 = pd.Series(sum(org[col] for col in cols[94:120]))
+    temp4 = round(temp1/26)
+
+    temp5 = pd.Series(sum(org[col] for col in cols[120:176]))
+    temp5 = round(temp1/56)
+
+    temp6 = pd.Series(sum(org[col] for col in cols[176:215]))
+    temp6 = round(temp1/39)
+
+    temp7 = pd.Series(sum(org[col] for col in cols[215:264]))
+    temp7 = round(temp1/49)
+
+    temp8 = pd.Series(sum(org[col] for col in cols[264:282]))
+    temp8 = round(temp1/18)
 
     new_passenger['1호선'] = temp1
-    
-    
-    print(cols)
-    print(new_passenger)    
+    new_passenger['2호선'] = temp2
+    new_passenger['3호선'] = temp3
+    new_passenger['4호선'] = temp4
+    new_passenger['5호선'] = temp5
+    new_passenger['6호선'] = temp6
+    new_passenger['7호선'] = temp7
+    new_passenger['8호선'] = temp8
+
+
+    # print(cols[264:282])
+    print(new_passenger.tail(10))    
     
 passenger_bus_delay_corr()    
     
