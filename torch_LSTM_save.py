@@ -29,15 +29,20 @@ print(torch.__version__)    # 2.2.0+cu118
 # delay_csv = load_delay()
 # x, y = split_xy(delay_csv,100)
 
-passenger_csv = load_passenger()
-x, y = split_xy(passenger_csv,24)
-print(x.shape,y.shape)
+# passenger_csv = load_passenger()
+# x, y = split_xy(passenger_csv,24)
+# print(x.shape,y.shape)
 
-np.save('./data/temp_x.npz',x)
-np.save('./data/temp_y.npz',y)
+weather_csv = load_weather()
+x, y = split_xy(weather_csv,24)
 
-x = np.load('./data/temp_x.npz')
-y = np.load('./data/temp_y.npz')
+# np.save('./data/temp_x',x)
+# np.save('./data/temp_y',y)
+
+x = np.load('./data/temp_x.npy')
+y = np.load('./data/temp_y.npy')
+
+print(x.shape[1:],y.shape)
 
 class CustomImageDataset(Dataset):
     def __init__(self,x_data,y_data,transform=None) -> None:    # 생성자, x,y데이터, 변환함수 설정
@@ -140,7 +145,7 @@ class MyLSTM(nn.Module):
         return out
     
 # model = TorchLSTM(1,(3,1),1).to(device)
-model = MyLSTM(num_classes=1, input_shape=(x.size(1),x.size(2)), hidden_size=128, num_layers=1).to(device)
+model = MyLSTM(num_classes=1, input_shape=x.shape[1:], hidden_size=128, num_layers=1).to(device)
 
 loss_fn = nn.MSELoss()
 # loss_fn = nn.CrossEntropyLoss() # 이 함수에 softmax가 내재되어있기에 모델에서 softmax를 쓰면 안된다
