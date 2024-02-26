@@ -3,7 +3,7 @@ import numpy as np
 import pickle
 import os.path
 import datetime as dt
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, RobustScaler
 
 def make_passenger_csv(path=None): 
     ''' 
@@ -204,8 +204,9 @@ def make_bus_csv(path=None):
     new_bus_csv = new_bus_csv.fillna(method='ffill')
     return new_bus_csv
 
-def scaling(dataset):
-    scaler = MaxAbsScaler()
+def scaling(dataset,scaler_type='minmax'):
+    scaler_dict = {'minmax':MinMaxScaler(),'maxabs':MaxAbsScaler(),'standard':StandardScaler(),'robust':RobustScaler()}
+    scaler = scaler_dict[scaler_type]
     for idx, label in enumerate(dataset):
         data = np.array(dataset[label])
         data = data.reshape(-1,1)
@@ -215,24 +216,34 @@ def scaling(dataset):
         dataset[label] = scaled_data
     return dataset
 
+def scaling_col_by_col(dataset,scaler_type='minmax'):
+    scaler_dict = {'minmax':MinMaxScaler(),'maxabs':MaxAbsScaler(),'standard':StandardScaler(),'robust':RobustScaler()}
+    scaler = scaler_dict[scaler_type]
+    for idx, label in enumerate(dataset):
+        data = np.array(dataset[label])
+        data = data.reshape(-1,1)
+        scaled_data = scaler.fit_transform(data)
+        dataset[label] = scaled_data
+    return dataset
+
 def load_passenger():
     passenger_csv = make_passenger_csv()
-    
+    passenger_csv = scaling(passenger_csv,'maxabs')
     return passenger_csv
 
 def load_delay():
     delay_csv = make_delay_csv()
-    
+    delay_csv = scaling(delay_csv,'minmax')
     return delay_csv
 
 def load_weather():
     weather_csv = make_weather_csv()
-    
+    weather_csv = scaling_col_by_col(weather_csv,'standard')
     return weather_csv
 
 def load_bus():
     bus_csv = make_bus_csv()
-    bus_csv = scaling(bus_csv)
+    bus_csv = scaling(bus_csv,'minmax')
     return bus_csv
 
 if __name__ == "__main__":
