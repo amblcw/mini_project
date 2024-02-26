@@ -20,11 +20,11 @@ print(torch.__version__)    # 2.2.0+cu118
 # y = np.array([4,5,6,7,8,9,10]).astype(np.float32)
 # print(x.shape,y.shape) # (7, 3, 1) (7,)
 
-# bus_csv = load_bus()
-# print(bus_csv.shape)
-# x, y = split_xy(bus_csv,100)
-# print(x.shape, y.shape)
-# print(y[:10])
+bus_csv = load_bus()
+print(bus_csv.shape)
+x, y = split_xy(bus_csv,100)
+print(x.shape, y.shape)
+print(y[:10])
 
 # delay_csv = load_delay()
 # x, y = split_xy(delay_csv,100)
@@ -33,14 +33,14 @@ print(torch.__version__)    # 2.2.0+cu118
 # x, y = split_xy(passenger_csv,24)
 # print(x.shape,y.shape)
 
-weather_csv = load_weather()
-x, y = split_xy(weather_csv,24)
+# weather_csv = load_weather()
+# x, y = split_xy(weather_csv,24)
 
 # np.save('./data/temp_x',x)
 # np.save('./data/temp_y',y)
 
-x = np.load('./data/temp_x.npy')
-y = np.load('./data/temp_y.npy')
+# x = np.load('./data/temp_x.npy')
+# y = np.load('./data/temp_y.npy')
 
 print(x.shape[1:],y.shape)
 
@@ -81,12 +81,12 @@ for X, y in test_dataloader:    # dataloader는 인덱스로 접근이 되지 �
 
 
 device = (
-    "cpu"
-    # "cuda"
-    # if torch.cuda.is_available() 
-    # else "mps" 
-    # if torch.backends.mps.is_available() 
-    # else "cpu"
+    # "cpu"
+    "cuda"
+    if torch.cuda.is_available() 
+    else "mps" 
+    if torch.backends.mps.is_available() 
+    else "cpu"
 )
 
 class TorchLSTM(nn.Module):
@@ -112,22 +112,22 @@ class MyLSTM(nn.Module):
         
         self.num_classes = num_classes
         self.num_layers  = num_layers
-        self.input_size  = input_shape[1]
+        self.input_size  = input_shape[0]
         self.hidden_size = hidden_size
-        self.seq_length  = input_shape[0]
+        self.seq_length  = input_shape[1]
         # self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
         #                     num_layers=num_layers, batch_first=True)
-        self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32, kernel_size=3, stride=1, padding=1)
-        self.lstm = nn.LSTM(input_size=8, hidden_size=hidden_size,
+        self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32, kernel_size=3, stride=1, padding=1, device=device)
+        self.lstm = nn.LSTM(input_size=2, hidden_size=hidden_size, device=device,
                             num_layers=num_layers, batch_first=True)
         self.fc = nn.Sequential(
-            nn.Linear(hidden_size, 128),
+            nn.Linear(hidden_size, 128, device=device),
             nn.ReLU(),
-            nn.Linear(128,64),
+            nn.Linear(128,64, device=device),
             nn.ReLU(),
-            nn.BatchNorm1d(64),
+            nn.BatchNorm1d(64, device=device),
             nn.Dropout(0.01),
-            nn.Linear(64,32),
+            nn.Linear(64,32, device=device),
             nn.ReLU(),
             # nn.Linear(32,16),
             # nn.ReLU(),
@@ -136,12 +136,16 @@ class MyLSTM(nn.Module):
         )
     
     def forward(self, x):
+        # print("x size at first",x.size())
         x = self.conv1d(x)
+        # print("x size at second",x.size())
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         ula, (h_out, c_out) = self.lstm(x, (h_0,c_0))
         h_out = h_out.view(-1, self.hidden_size)   
+        # print("x size at third",x.size())
         out = self.fc(h_out)
+        # print("x size at final",x.size())
         return out
     
 # model = TorchLSTM(1,(3,1),1).to(device)
@@ -152,6 +156,7 @@ loss_fn = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters())
 
 def train(dataloader, model, loss_fn, optimizer, verbose=True):
+    model.train()
     size = len(dataloader.dataset)
     for batch, (X,y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -185,7 +190,7 @@ def test(dataloader, model, loss_fn):
             pred = pred.reshape(-1)
             pred = pred.to(device)
             test_loss += loss_fn(pred, y).item()
-            metric = R2Score()
+            metric = R2Score().to(device)
             metric.update(pred,y).to(device)
             r2 = metric.compute()
             
