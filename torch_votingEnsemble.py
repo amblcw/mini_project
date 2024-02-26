@@ -12,11 +12,11 @@ from preprocessing import load_bus, load_delay, load_passenger, load_weather
 from function_package import split_xy
 from sklearn.metrics import r2_score
 from torcheval.metrics import R2Score
-from sklearn.ensemble import VotingRegressor, RandomForestRegressor
-from sklearn.tree import DecisionTreeRegressor
-from xgboost import XGBRegressor
-import torch.nn.functional as F
 import copy
+from skorch import NeuralNetRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import VotingRegressor, RandomForestRegressor
+from xgboost import XGBRegressor
 
 print(torch.__version__)    # 2.2.0+cu118
 
@@ -39,8 +39,7 @@ print(torch.__version__)    # 2.2.0+cu118
 
 weather_csv = load_weather()
 print(weather_csv.head(24))
-x, y = split_xy(weather_csv,480)
-NAME = 'Weather'
+x, y = split_xy(weather_csv,24)
 print("Weather")
 
 np.save('./data/temp_x',x)
@@ -49,7 +48,7 @@ np.save('./data/temp_y',y)
 # x = np.load('./data/temp_x.npy')
 # y = np.load('./data/temp_y.npy')
 
-print("x shape, y shape ",x.shape,y.shape)
+print(x.shape[1:],y.shape)
 
 class CustomImageDataset(Dataset):
     def __init__(self,x_data,y_data,transform=None) -> None:    # 생성자, x,y데이터, 변환함수 설정
@@ -73,13 +72,18 @@ class CustomImageDataset(Dataset):
             
         return sample
 
-import matplotlib.pyplot as plt
 
 training_data = CustomImageDataset(x,y) # 인스턴스 선언 및 데이터 지정
 
 BATCH_SIZE = 128
 train_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=True)  # 만든 커스텀 데이터를 iterator형식으로 변경
 test_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=True)
+
+# for X, y in test_dataloader:    # dataloader는 인덱스로 접근이 되지 않으며 .next()또한 사용할 수 없다 오직 for문만 가능하며 그렇기에 출력을 위해 한바퀴 돌자마자 break한다
+#     print(f"Shape of X [N, C, H, W]: {X.shape}")
+#     print(f"Shaep of y: {y.shape} {y.dtype}")
+#     break
+
 
 device = (
     # "cpu"
@@ -90,17 +94,79 @@ device = (
     else "cpu"
 )
 
-class EnsembleModel(nn.Module):
-    def __init__(self,) -> None:
-        super(EnsembleModel,self).__init__()
-        self.xgb = XGBRegressor()
-        self.rf  = RandomForestRegressor()
-        self.dt  = DecisionTreeRegressor()
+class TorchLSTM(nn.Module):
+    def __init__(self,input_shape,output_shape) -> None:
+        super().__init__()
+        # self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.LSTM(input_shape,256,batch_first=True),
+            nn.ReLU(),
+            nn.Linear(256,128),
+            nn.ReLU(),
+            nn.Linear(128,output_shape)
+        )
         
+    def forward(self,x):
+        # x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
+    
+class MyLSTM(nn.Module):
+    def __init__(self, num_classes, input_shape, hidden_size, num_layers) -> None:
+        super(MyLSTM, self).__init__()
+        
+        self.num_classes = num_classes
+        self.num_layers  = num_layers
+        self.input_size  = input_shape[0]
+        self.hidden_size = hidden_size
+        self.seq_length  = input_shape[1]
+        # self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
+        #                     num_layers=num_layers, batch_first=True)
+        self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32, kernel_size=3, stride=1, padding=1, device=device)
+        self.lstm = nn.LSTM(input_size=self.seq_length, hidden_size=hidden_size, device=device,
+                            num_layers=num_layers, batch_first=True)
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_size, 128, device=device),
+            nn.ReLU(),
+            nn.Linear(128,64, device=device),
+            nn.ReLU(),
+            nn.BatchNorm1d(64, device=device),
+            nn.Dropout(0.01),
+            nn.Linear(64,32, device=device),
+            nn.ReLU(),
+            # nn.Linear(32,16, device=device),
+            # nn.ReLU(),
+            nn.Dropout(0.01),
+            nn.Linear(32,num_classes)
+        )
+    
     def forward(self, x):
-        pred1 = XGBRegressor(x)
-        
-        
+        # print("x size at first",x.size())
+        x = self.conv1d(x)
+        # print("x size at second",x.size())
+        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+        ula, (h_out, c_out) = self.lstm(x, (h_0,c_0))
+        h_out = h_out.view(-1, self.hidden_size)   
+        # print("x size at third",x.size())
+        out = self.fc(h_out)
+        # print("x size at final",x.size())
+        return out
+    
+# model = TorchLSTM(1,(3,1),1).to(device)
+# model = MyLSTM(num_classes=1, input_shape=x.shape[1:], hidden_size=128, num_layers=1).to(device)
+
+my_lstm = NeuralNetRegressor(MyLSTM(num_classes=1, input_shape=x.shape[1:], hidden_size=128, num_layers=1),
+                             max_epochs=1000, 
+                             device='cuda',
+                             criterion=nn.MSELoss,
+                             optimizer = torch.optim.Adam,
+                             optimizer__lr = 0.01
+                             )
+
+model = VotingRegressor([
+    ('MyLSTM',my_lstm)
+])
 
 loss_fn = nn.MSELoss()
 # loss_fn = nn.CrossEntropyLoss() # 이 함수에 softmax가 내재되어있기에 모델에서 softmax를 쓰면 안된다
@@ -133,12 +199,11 @@ def test(dataloader, model, loss_fn):
     model.eval()    # 모델을 평가 모드로 전환, Dropout이나 BatchNomalization등을 비활성화
     test_loss, correct = 0, 0
     
-    last_pred = last_y = None
+    
     with torch.no_grad():
         for X, y in dataloader:
             X, y = X.to(device), y.to(device)
-            last_y = y
-            last_pred = pred = model(X)
+            pred = model(X)
             pred = pred.reshape(-1)
             pred = pred.to(device)
             test_loss += loss_fn(pred, y).item()
@@ -150,24 +215,21 @@ def test(dataloader, model, loss_fn):
     test_loss /= num_batches    
     correct /= num_batches
     print(f"Test Error \n R2: {(correct):>0.4f}, Avg loss: {test_loss:>8f}\n")
-    return test_loss, last_pred, last_y
+    return test_loss
     
 if __name__ == '__main__':
     print(f"Using {device} device")
     print(model)
     
-    EPOCHS = 1000
-    PATIENCE = 1000
+    EPOCHS = 500
+    PATIENCE = 500
     best_loss = 987654321
     best_model = None
     patience_count = 0
-    loss_list = []
-    last_pred = last_y = None
     for t in range(EPOCHS):
         print(f"Epoch {t+1}\n---------------------")
         train(train_dataloader, model, loss_fn, optimizer,verbose=False)
-        loss, last_pred, last_y = test(test_dataloader, model, loss_fn)
-        loss_list.append(loss)
+        loss = test(test_dataloader, model, loss_fn)
         if loss < best_loss:
             best_loss = loss
             best_model = copy.deepcopy(model)   # restore best weight 구현
@@ -182,12 +244,17 @@ if __name__ == '__main__':
     print("===== best model =====")
     test(test_dataloader,best_model,loss_fn)
     print("Best loss: ",best_loss)
-    print("last_pred: ",last_pred, "| last_y: ", last_y)
     print("Done")
-    torch.save(best_model.state_dict,f'./data/torch_model_save/{NAME}_loss_{best_loss:.4f}.pth')
-
     
-    '''
-    지연 예측을 다중분류로 만들어버린 뒤 sklearn.ensemble.VotingClassifier적용해보기
-    
-    '''
+    # print(x[:10],y[:10])
+    # with torch.no_grad():
+    #     model.eval()
+    #     pred = model(x)
+    #     metric = R2Score()
+    #     metric.update(x,y)
+    #     metric.compute()
+    # import os
+    # dir_path = os.getcwd()
+    # print(dir_path)
+    # torch.save(model.state_dict(), dir_path+"./python/torch_model_save/torch_LSTM_model.pth")
+    # print("Model saved")

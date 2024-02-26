@@ -68,7 +68,6 @@ class CustomImageDataset(Dataset):
             
         return sample
 
-import matplotlib.pyplot as plt
 
 training_data = CustomImageDataset(x,y) # 인스턴스 선언 및 데이터 지정
 
