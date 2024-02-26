@@ -13,8 +13,8 @@ def make_passenger_csv(path=None):
     지하철 이용 승하차 인원 데이터 프레임을 만드는 함수입니다(라벨 인코딩 포함)
     일 단위로 자른다음 시간열과 정류장 행을 전환한다. 그리고 승차-하차 인원으로서 표현한다 그리고 '24시 이후', '합계', '6시 이전'은 삭제
     '''
-    if os.path.exists('./data/passenger.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-        return pd.read_pickle('./data/passenger.pkl')
+    # if os.path.exists('./data/passenger.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+    #     return pd.read_pickle('./data/passenger.pkl')
     
     row_passenger_csv = pd.read_csv("./data/2023년 1~8월 이용인원.csv",index_col=0,encoding="UTF-8")
     # if path != None:
@@ -98,8 +98,8 @@ def make_delay_csv(path=None):
     2023-01-01    09시~18시        0               5              0               0
     2023-01-02    첫차~09시        0               20             0               0
     '''
-    if os.path.exists('./data/delay_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-        return pd.read_pickle('./data/delay_list.pkl')       
+    # if os.path.exists('./data/delay_list.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+    #     return pd.read_pickle('./data/delay_list.pkl')       
     
     row_delay_csv = pd.read_csv('./data/서울교통공사_노선별 지연시간 정보_20230831.csv',index_col=0,encoding="EUC-KR")
     if path != None:
