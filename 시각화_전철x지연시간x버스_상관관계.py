@@ -62,7 +62,7 @@ def passenger_bus_delay_corr():
 
 
 # def plot_correlation_heatmap(new_passenger_matrix, bus_matrix):
-def plot_correlation_heatmap(new_passenger_matrix:pd.DataFrame): 
+def plot_correlation_heatmap(new_passenger_matrix): 
     
     new_passenger_matrix.to_csv('./data/new_passenger_matrix.csv')
     from matplotlib import font_manager, rc
@@ -78,7 +78,7 @@ def plot_correlation_heatmap(new_passenger_matrix:pd.DataFrame):
     # 전철 상관관계 히트맵
     plt.figure(figsize=(12, 6))
     sns.heatmap(new_passenger_matrix, annot=True, cmap='coolwarm',
-                fmt=".4f", linewidths=.5, xticklabels=45,)
+                fmt=".4f", linewidths=.5)
     # annot=True는 각 셀에 숫자 값을 표시하도록 하는 옵션입니다.
     # cmap='coolwarm'는 색상 맵을 지정합니다. 
     # fmt=".4f"는 셀에 표시되는 숫자의 형식을 소수점 네 번째 자리까지 표시하도록 지정합니다. 
