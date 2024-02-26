@@ -38,11 +38,6 @@ def day_trail_mean():
     
     return daily_trail_avg
     
-# 함수를 호출하여 일별 강수량 평균을 얻습니다.
-rain_day_avg = day_rain_mean()
-print('일별 강수량 평균 : ',rain_day_avg)
-trail_day_avg = day_trail_mean()
-print('지하철 평균 이용객수 : \n',trail_day_avg.head())
 
 ##############################################################################
 import matplotlib.pyplot as plt
