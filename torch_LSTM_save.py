@@ -20,11 +20,11 @@ print(torch.__version__)    # 2.2.0+cu118
 # y = np.array([4,5,6,7,8,9,10]).astype(np.float32)
 # print(x.shape,y.shape) # (7, 3, 1) (7,)
 
-bus_csv = load_bus()
-print(bus_csv.shape)
-x, y = split_xy(bus_csv,100)
-print(x.shape, y.shape)
-print(y[:10])
+# bus_csv = load_bus()
+# print(bus_csv.shape)
+# x, y = split_xy(bus_csv,100)
+# print(x.shape, y.shape)
+# print(y[:10])
 
 # delay_csv = load_delay()
 # x, y = split_xy(delay_csv,100)
@@ -33,11 +33,13 @@ print(y[:10])
 # x, y = split_xy(passenger_csv,24)
 # print(x.shape,y.shape)
 
-# weather_csv = load_weather()
-# x, y = split_xy(weather_csv,24)
+weather_csv = load_weather()
+print(weather_csv.head(24))
+x, y = split_xy(weather_csv,24)
+print("Weather")
 
-# np.save('./data/temp_x',x)
-# np.save('./data/temp_y',y)
+np.save('./data/temp_x',x)
+np.save('./data/temp_y',y)
 
 # x = np.load('./data/temp_x.npy')
 # y = np.load('./data/temp_y.npy')
@@ -74,10 +76,10 @@ BATCH_SIZE = 128
 train_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=True)  # 만든 커스텀 데이터를 iterator형식으로 변경
 test_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=True)
 
-for X, y in test_dataloader:    # dataloader는 인덱스로 접근이 되지 않으며 .next()또한 사용할 수 없다 오직 for문만 가능하며 그렇기에 출력을 위해 한바퀴 돌자마자 break한다
-    print(f"Shape of X [N, C, H, W]: {X.shape}")
-    print(f"Shaep of y: {y.shape} {y.dtype}")
-    break
+# for X, y in test_dataloader:    # dataloader는 인덱스로 접근이 되지 않으며 .next()또한 사용할 수 없다 오직 for문만 가능하며 그렇기에 출력을 위해 한바퀴 돌자마자 break한다
+#     print(f"Shape of X [N, C, H, W]: {X.shape}")
+#     print(f"Shaep of y: {y.shape} {y.dtype}")
+#     break
 
 
 device = (
@@ -118,7 +120,7 @@ class MyLSTM(nn.Module):
         # self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
         #                     num_layers=num_layers, batch_first=True)
         self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32, kernel_size=3, stride=1, padding=1, device=device)
-        self.lstm = nn.LSTM(input_size=2, hidden_size=hidden_size, device=device,
+        self.lstm = nn.LSTM(input_size=self.seq_length, hidden_size=hidden_size, device=device,
                             num_layers=num_layers, batch_first=True)
         self.fc = nn.Sequential(
             nn.Linear(hidden_size, 128, device=device),
@@ -129,7 +131,7 @@ class MyLSTM(nn.Module):
             nn.Dropout(0.01),
             nn.Linear(64,32, device=device),
             nn.ReLU(),
-            # nn.Linear(32,16),
+            # nn.Linear(32,16, device=device),
             # nn.ReLU(),
             nn.Dropout(0.01),
             nn.Linear(32,num_classes)
@@ -205,6 +207,7 @@ if __name__ == '__main__':
     print(model)
     
     EPOCHS = 500
+    PATIENCE = 500
     best_loss = 987654321
     best_model = None
     patience_count = 0
@@ -219,7 +222,7 @@ if __name__ == '__main__':
         else:
             patience_count += 1
             
-        if patience_count >= 100:
+        if patience_count >= PATIENCE:
             print("Early Stopped")
             break
 
