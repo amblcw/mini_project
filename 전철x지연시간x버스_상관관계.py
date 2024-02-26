@@ -41,7 +41,6 @@ def passenger_bus_delay_corr():
     passenger_data['8호선'] = temp8
     print('전철 쉐이프', passenger_data.shape)
     bus_data = make_bus_csv()
-    # bus_data = bus_data.iloc[:, 2:]
     print('버스 쉐이프', bus_data.shape)
     delay_data = make_delay_csv()
     print('지연 쉐이프', delay_data.shape)
@@ -55,19 +54,17 @@ def passenger_bus_delay_corr():
     for label in bus_data:
         new_passenger_data[label] = bus_data[label]
     
-
-
     print('전철 데이터\n', new_passenger_data.tail(24))
 
     new_passenger_matrix = new_passenger_data.corr()
-    
 
     return new_passenger_matrix
 
 
 # def plot_correlation_heatmap(new_passenger_matrix, bus_matrix):
-def plot_correlation_heatmap(new_passenger_matrix):
+def plot_correlation_heatmap(new_passenger_matrix:pd.DataFrame): 
     
+    new_passenger_matrix.to_csv('./data/new_passenger_matrix.csv')
     from matplotlib import font_manager, rc
     
     # 한글 폰트 경로 설정
@@ -78,22 +75,19 @@ def plot_correlation_heatmap(new_passenger_matrix):
     # 마이너스 부호 깨짐 방지 설정
     plt.rcParams['axes.unicode_minus'] = False
     
-    
-    plt.figure(figsize=(12, 6))
-
     # 전철 상관관계 히트맵
-    # plt.subplot(1, 2, 1)
-    sns.heatmap(new_passenger_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=.5)
-    plt.title('Correlation Heatmap - Passenger & Delay')
-    plt.xlabel('Variables')
-    plt.ylabel('Variables')
-
-
-
-
-    # 산점도 행렬 그리기
-    # sns.pairplot(new_passenger_matrix)
-    # sns.pairplot(bus_matrix)
+    plt.figure(figsize=(12, 6))
+    sns.heatmap(new_passenger_matrix, annot=True, cmap='coolwarm',
+                fmt=".4f", linewidths=.5, xticklabels=45,)
+    # annot=True는 각 셀에 숫자 값을 표시하도록 하는 옵션입니다.
+    # cmap='coolwarm'는 색상 맵을 지정합니다. 
+    # fmt=".4f"는 셀에 표시되는 숫자의 형식을 소수점 네 번째 자리까지 표시하도록 지정합니다. 
+    # linewidths=.5는 셀 사이의 선의 너비를 설정합니다. 
+    # xticklabels=45는 x축 눈금 레이블이 매 45도마다 표시되도록 설정합니다
+    # rotation=0은 x축 눈금 레이블의 텍스트가 수평으로 표시되도록 설정합니다.
+    plt.title('전철 승객수 & 버스 승객수 & 전철지연시간 간의 상관관계')
+    # plt.xlabel('Variables')
+    # plt.ylabel('Variables')
 
     plt.tight_layout()
     plt.show()
