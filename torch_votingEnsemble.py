@@ -18,37 +18,57 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import VotingRegressor, RandomForestRegressor
 from xgboost import XGBRegressor
 
+
 print(torch.__version__)    # 2.2.0+cu118
 
 # x = np.array([[1,2,3],[2,3,4],[3,4,5],[4,5,6],[5,6,7],[6,7,8],[7,8,9]]).reshape(-1,3,1)
 # y = np.array([4,5,6,7,8,9,10]).astype(np.float32)
 # print(x.shape,y.shape) # (7, 3, 1) (7,)
 
-# bus_csv = load_bus()
-# print(bus_csv.shape)
-# x, y = split_xy(bus_csv,100)
-# print(x.shape, y.shape)
-# print(y[:10])
+RNN_MODE = False
 
-# delay_csv = load_delay()
-# x, y = split_xy(delay_csv,100)
+if RNN_MODE:
+    passenger_csv = load_passenger()
+    x, y = split_xy(passenger_csv,24)
+    print(x.shape,y.shape)
+else:
+    weather_csv = load_weather()
+    delay_csv = load_delay()
+    concat_csv = pd.DataFrame()
+    for label in weather_csv:
+        concat_csv[label] = weather_csv[label]
+    for label in delay_csv:
+        concat_csv[label] = delay_csv[label]
+    print(concat_csv.shape)
+    # print(weather_csv.head(24))
+    x, y = split_xy(concat_csv,1,y_col=3)
+    print("Weather")
 
-# passenger_csv = load_passenger()
-# x, y = split_xy(passenger_csv,24)
-# print(x.shape,y.shape)
+    x = x.reshape(x.shape[0],x.shape[1]*x.shape[2])
+    print(x.shape,y.shape)
 
-weather_csv = load_weather()
-print(weather_csv.head(24))
-x, y = split_xy(weather_csv,24)
-print("Weather")
+    print(x[-24:])
+    print(y[-24:])
+    # x = x.astype(np.float32)
+    # y = y.astype(np.float32)
+    x = torch.FloatTensor(x)
+    y = torch.FloatTensor(y)
+
+# x = pd.DataFrame(x)
+# y = pd.Series(y)
+# print(x.isna().sum()) # 결측치 없음
+# print(y.isna().sum())    # 결측치 없음
+
+# print(x.head)
+# print(y.head)
+# print(np.dtype(x))
+# print(np.dtype(y))
 
 np.save('./data/temp_x',x)
 np.save('./data/temp_y',y)
 
 # x = np.load('./data/temp_x.npy')
 # y = np.load('./data/temp_y.npy')
-
-print(x.shape[1:],y.shape)
 
 class CustomImageDataset(Dataset):
     def __init__(self,x_data,y_data,transform=None) -> None:    # 생성자, x,y데이터, 변환함수 설정
@@ -88,11 +108,13 @@ test_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=Tru
 device = (
     # "cpu"
     "cuda"
-    if torch.cuda.is_available() 
+    if torch.cuda.is_available()
     else "mps" 
     if torch.backends.mps.is_available() 
     else "cpu"
 )
+# if RNN_MODE:
+#     device = 'cpu'
 
 class TorchLSTM(nn.Module):
     def __init__(self,input_shape,output_shape) -> None:
@@ -110,6 +132,27 @@ class TorchLSTM(nn.Module):
         # x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
+    
+class TorchDNN(nn.Module):
+    def __init__(self,input_shape,output_shape) -> None:
+        super().__init__()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(input_shape,256,device=device),
+            nn.ReLU(),
+            nn.Linear(256,128,device=device),
+            nn.ReLU(),
+            nn.Linear(128,output_shape,device=device)
+        )
+        
+    def forward(self,x):
+        logits = self.linear_relu_stack(x)
+        # if self.training == False:
+        #     print("is enter?", logits, type(logits))
+        #     return torch.Tensor.numpy(logits)
+        # print("logits shape!!!!!!!!!!!!!!!!",logits.shape)
+        logits = logits.reshape(-1,)
+        return logits
+    
     
 class MyLSTM(nn.Module):
     def __init__(self, num_classes, input_shape, hidden_size, num_layers) -> None:
@@ -155,19 +198,40 @@ class MyLSTM(nn.Module):
     
 # model = TorchLSTM(1,(3,1),1).to(device)
 # model = MyLSTM(num_classes=1, input_shape=x.shape[1:], hidden_size=128, num_layers=1).to(device)
+if RNN_MODE:
+    my_lstm = NeuralNetRegressor(MyLSTM(num_classes=1, input_shape=x.shape[1:], hidden_size=128, num_layers=1),
+                                max_epochs=1000, 
+                                device=device,
+                                criterion=nn.MSELoss,
+                                optimizer = torch.optim.Adam,
+                                optimizer__lr = 0.01,
+                                verbose=0,
+                                )
 
-my_lstm = NeuralNetRegressor(MyLSTM(num_classes=1, input_shape=x.shape[1:], hidden_size=128, num_layers=1),
-                             max_epochs=1000, 
-                             device='cuda',
-                             criterion=nn.MSELoss,
-                             optimizer = torch.optim.Adam,
-                             optimizer__lr = 0.01
-                             )
+my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x.shape[1],output_shape=1),
+                            max_epochs=1000,
+                            device=device,
+                            criterion=nn.MSELoss,
+                            optimizer=torch.optim.Adam,
+                            )
 
-model = VotingRegressor([
-    ('MyLSTM',my_lstm)
-])
-
+model = None
+if RNN_MODE:
+    model = VotingRegressor([
+    #     ('My_DNN',my_dnn),
+        ('MyLSTM',my_lstm),
+        # ('RandomForestRegressor',RandomForestRegressor()),
+        ('XGBRegressor',XGBRegressor()),
+    ])
+else:
+    model = VotingRegressor([
+        ('My_DNN',my_dnn),
+        # ('MyLSTM',my_lstm),
+        ('RandomForestRegressor',RandomForestRegressor()),
+        ('XGBRegressor',XGBRegressor()),
+    ])
+    
+""" 
 loss_fn = nn.MSELoss()
 # loss_fn = nn.CrossEntropyLoss() # 이 함수에 softmax가 내재되어있기에 모델에서 softmax를 쓰면 안된다
 optimizer = torch.optim.Adam(model.parameters())
@@ -257,4 +321,10 @@ if __name__ == '__main__':
     # dir_path = os.getcwd()
     # print(dir_path)
     # torch.save(model.state_dict(), dir_path+"./python/torch_model_save/torch_LSTM_model.pth")
-    # print("Model saved")
+    # print("Model saved") """
+    
+model.fit(x,y)
+r2 = model.score(x,y)
+y_predict = model.predict(x)
+
+print("R2: ",r2)

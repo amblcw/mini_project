@@ -116,11 +116,11 @@ class MyLSTM(nn.Module):
         self.input_size  = input_shape[0]
         self.hidden_size = hidden_size
         self.seq_length  = input_shape[1]
-        # self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
-        #                     num_layers=num_layers, batch_first=True)
-        self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32, kernel_size=3, stride=1, padding=1, device=device)
-        self.lstm = nn.LSTM(input_size=self.seq_length, hidden_size=hidden_size, device=device,
-                            num_layers=num_layers, batch_first=True)
+
+        self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32,
+                                kernel_size=3, stride=1, padding=1, device=device)
+        self.lstm = nn.LSTM(input_size=self.seq_length, hidden_size=hidden_size, 
+                            device=device, num_layers=num_layers, batch_first=True)
         self.fc = nn.Sequential(
             nn.Linear(hidden_size, 128, device=device),
             nn.ReLU(),
@@ -130,23 +130,17 @@ class MyLSTM(nn.Module):
             nn.Dropout(0.01),
             nn.Linear(64,32, device=device),
             nn.ReLU(),
-            # nn.Linear(32,16, device=device),
-            # nn.ReLU(),
             nn.Dropout(0.01),
             nn.Linear(32,num_classes)
         )
     
     def forward(self, x):
-        # print("x size at first",x.size())
         x = self.conv1d(x)
-        # print("x size at second",x.size())
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         ula, (h_out, c_out) = self.lstm(x, (h_0,c_0))
         h_out = h_out.view(-1, self.hidden_size)   
-        # print("x size at third",x.size())
         out = self.fc(h_out)
-        # print("x size at final",x.size())
         return out
     
 # model = TorchLSTM(1,(3,1),1).to(device)

@@ -109,18 +109,18 @@ def split_x(dataset, time_step:int):
     
     return result
 
-def split_xy(dataset:pd.DataFrame,time_step,y_col='None'):
+def split_xy(dataset:pd.DataFrame,time_step,y_col=None):
     '''
     아직 시계열 데이터 등에 대한건 더 개선 필요
     '''
     dataset = dataset.astype(np.float32)
     dataset = dataset.to_numpy()
     result = np.array([])
-    result_y = []
-    if y_col == 'None':
-        time_step += 1  # y까지 포함해서 잘라야하기에 +1
-    else:
-        num += 1        # y들어갈거 생각하면 1칸 비워줘야하기에
+    time_step += 1  # y까지 포함해서 잘라야하기에 +1
+    # if y_col == 'None':
+    #     time_step += 1  # y까지 포함해서 잘라야하기에 +1
+    # else:
+    #     num += 1        # y들어갈거 생각하면 1칸 비워줘야하기에
 
     num = len(dataset) - time_step + 1
     if num <= 0: # 자르는 것이 불가능한 time_step이 들어온 경우
@@ -140,9 +140,9 @@ def split_xy(dataset:pd.DataFrame,time_step,y_col='None'):
     
     
     
-    if y_col == 'None':
-        return result[:,:-1,:] , result[:,-1,0]
+    if y_col == None:
+        return result[:,:-1,:], result[:,-1,0]
     else:
-        pass
+        return result[:,:-1,:],  result[:,-1,y_col]
     
 acc = 1.0

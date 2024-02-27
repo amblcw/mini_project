@@ -13,12 +13,12 @@ def make_passenger_csv(path=None):
     지하철 이용 승하차 인원 데이터 프레임을 만드는 함수입니다(라벨 인코딩 포함)
     일 단위로 자른다음 시간열과 정류장 행을 전환한다. 그리고 승차-하차 인원으로서 표현한다 그리고 '24시 이후', '합계', '6시 이전'은 삭제
     '''
-    # if os.path.exists('./data/passenger.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-    #     return pd.read_pickle('./data/passenger.pkl')
+    if os.path.exists('./data/passenger.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+        return pd.read_pickle('./data/passenger.pkl')
     
     row_passenger_csv = pd.read_csv("./data/2023년 1~8월 이용인원.csv",index_col=0,encoding="UTF-8")
-    # if path != None:
-    #     row_passenger_csv = pd.read_csv(path,index_col=0,encoding="UTF-8")
+    if path != None:
+        row_passenger_csv = pd.read_csv(path,index_col=0,encoding="UTF-8")
     row_passenger_csv = row_passenger_csv.fillna(0)
     subway_line_num = row_passenger_csv['호선']
     subway_line_num = subway_line_num.str.replace("호선","").astype(int)    # 몇호선에서 숫자만 남김
@@ -247,11 +247,9 @@ def load_bus():
     return bus_csv
 
 if __name__ == "__main__":
-    passenger_csv = load_passenger()
-    print(passenger_csv.head(24),passenger_csv.tail(24))
-    print(passenger_csv.isna().sum())
     # print(passenger_csv)
-    # delay_csv = load_deay()
+    delay_csv = load_delay()
+    print(delay_csv.head(24))
     # print(delay_csv)
     # weather_csv = load_weather()
     # print(weather_csv)
