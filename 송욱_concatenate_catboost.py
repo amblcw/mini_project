@@ -23,20 +23,22 @@ delay_csv = load_deay()
 bus = bus_csv
 passenger = passenger_csv
 weather = weather_csv
-y = delay_csv['1호선지연(분)']
+x1 = weather
+x2 = delay_csv
+# y = delay_csv['1호선지연(분)']
 # y = delay_csv['2호선지연(분)']
 # y = delay_csv['3호선지연(분)']
 # y = delay_csv['4호선지연(분)']
 # y = delay_csv['5호선지연(분)']
 # y = delay_csv['6호선지연(분)']
 # y = delay_csv['7호선지연(분)']
-# y = delay_csv['8호선지연(분)']
+y = delay_csv['8호선지연(분)']
 
 # 훈련 및 테스트 데이터 분할(원하는 상황으로 주석처리를 바꾸기)
-# x1_train, x1_test, x2_train, x2_test, x3_train, x3_test, y_train, y_test = train_test_split(
-#     bus,passenger,weather, y, train_size=0.99, random_state=100, stratify=y)
+x1_train, x1_test, x2_train, x2_test, y_train, y_test = train_test_split(
+    x1,x2, y, train_size=0.7, random_state=100)
 # #버스데이터로 예측
-x_train, x_test, y_train, y_test = train_test_split(bus, y, train_size=0.99, random_state=100, stratify=y)
+# x_train, x_test, y_train, y_test = train_test_split(bus, y, train_size=0.99, random_state=100, stratify=y)
 # #인원데이터로 예측
 # x_train, x_test, y_train, y_test = train_test_split(passenger, y, train_size=0.99, random_state=100, stratify=y)
 # #날씨데이터로 예측
@@ -47,20 +49,18 @@ scaler = StandardScaler()
 # scaler = MinMaxScaler()
 # scaler = RobustScaler()
 # scaler = MaxAbsScaler()
-# x1_train_scaled = scaler.fit_transform(x1_train)
-# x1_test_scaled = scaler.transform(x1_test)
+x1_train_scaled = scaler.fit_transform(x1_train)
+x1_test_scaled = scaler.transform(x1_test)
 
-# x2_train_scaled = scaler.fit_transform(x2_train)
-# x2_test_scaled = scaler.transform(x2_test)
+x2_train_scaled = scaler.fit_transform(x2_train)
+x2_test_scaled = scaler.transform(x2_test)
 
-# x3_train_scaled = scaler.fit_transform(x3_train)
-# x3_test_scaled = scaler.transform(x3_test)
 # 스케일링(각각)
-x_train = scaler.fit_transform(x_train)
-x_test = scaler.transform(x_test)
+# x_train = scaler.fit_transform(x_train)
+# x_test = scaler.transform(x_test)
 # 데이터 연결(모든 데이터 이용시)
-# x_train = np.concatenate((x1_train_scaled, x2_train_scaled, x3_train_scaled), axis=1)
-# x_test = np.concatenate((x1_test_scaled, x2_test_scaled, x3_test_scaled), axis=1)
+x_train = np.concatenate((x1_train_scaled, x2_train_scaled), axis=1)
+x_test = np.concatenate((x1_test_scaled, x2_test_scaled), axis=1)
 
 def objective(trial):
     # 하이퍼파라미터 탐색 공간 정의
@@ -91,25 +91,47 @@ def objective(trial):
     
     return r2
 #optuna를 사용해서 최적의 파라미터 찾기
-study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=100)
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=10)
+#n_trials : 최적화를 위해 시도할 하이퍼파라미터 조합의 수
 
 print("Best parameters found: ", study.best_params)
 print("r2: ", study.best_value)
 
 # 최적의 모델 생성
-# best_params = study.best_params
-# best_model = CatBoostRegressor(**best_params,devices = 'gpu')
+best_params = study.best_params
+best_model = CatBoostRegressor(**best_params,devices = 'gpu')
 
-# # 최적의 모델 학습
-# best_model.fit(x_train, y_train, eval_set=(x_test, y_test), verbose=False)
+# 최적의 모델 학습
+best_model.fit(x_train, y_train, eval_set=(x_test, y_test), verbose=False)
 
-# # 모델 저장
-# best_model.save_model("c:/_data/_save/project/mini_project_catboost..bin')
+# 모델 저장
+best_model.save_model('c:/_data/_save/project/mini_project_catboost_8호선.pkl')
 '''
-Trial 99 finished with value: 0.3834932053464405 and parameters: {'iterations': 181, 'learning_rate': 0.01085648772400954, 'depth': 5, 'l2_leaf_reg': 0.15014931222078134, 'bagging_temperature': 9.924972743578977, 'random_strength': 6.524818007153559e-07, 'border_count': 188}. Best is trial 74 with value: 0.38028029524711415.
-Best parameters found:  {'iterations': 160, m 'learning_rate': 0.010007590675058442, 'depth': 5, 'l2_leaf_reg': 1.7642249481588387e-07, 'bagging_temperature': 1.8981025511571716, 'random_strength': 1.974135970216598e-06, 'border_count': 218}
-r2:  0.38028029524711415
+1호선
+Best parameters found:  {'iterations': 267, 'learning_rate': 0.14793591058781164, 'depth': 5, 'l2_leaf_reg': 0.009051784727242577, 'bagging_temperature': 1.0190490440253072e-06, 'random_strength': 0.0006038636238390358, 'border_count': 349}
+r2:  1.0
+2호선
+Best parameters found:  {'iterations': 185, 'learning_rate': 0.047259163685928286, 'depth': 6, 'l2_leaf_reg': 2.8622183057895185e-05, 'bagging_temperature': 3.202929781964671e-06, 'random_strength': 0.1881548437110795, 'border_count': 307}
+r2:  0.9997311140384715
+3호선
+Best parameters found:  {'iterations': 256, 'learning_rate': 0.16102746130589088, 'depth': 5, 'l2_leaf_reg': 1.787825547493175e-05, 'bagging_temperature': 0.40146091909335035, 'random_strength': 3.6924566349880362e-06, 'border_count': 304}
+r2:  0.9999999999999987
+4호선
+Best parameters found:  {'iterations': 193, 'learning_rate': 0.18312788168928823, 'depth': 6, 'l2_leaf_reg': 0.6108181456536589, 'bagging_temperature': 0.011382022840917192, 'random_strength': 4.929684150692956e-08, 'border_count': 342}
+r2:  1.0
+5호선
+Best parameters found:  {'iterations': 205, 'learning_rate': 0.055083605826417595, 'depth': 7, 'l2_leaf_reg': 0.5460135727154474, 'bagging_temperature': 1.4323264141197902e-05, 'random_strength': 0.2574851040957324, 'border_count': 188}
+r2:  0.9999433064339832
+6호선
+Best parameters found:  {'iterations': 296, 'learning_rate': 0.02927112629586736, 'depth': 7, 'l2_leaf_reg': 1.2164821421749149e-08, 'bagging_temperature': 1.8442996933886184e-07, 'random_strength': 1.527882270503721e-05, 'border_count': 266}
+r2:  0.9999998419369099
+7호선
+Best parameters found:  {'iterations': 217, 'learning_rate': 0.18788775371729727, 'depth': 4, 'l2_leaf_reg': 1.540890573985609e-05, 'bagging_temperature': 1.1406504168525654e-05, 'random_strength': 5.237619848309738e-05, 'border_count': 191}
+r2:  1.0
+8호선
+Best parameters found:  {'iterations': 242, 'learning_rate': 0.013748971103416401, 'depth': 4, 'l2_leaf_reg': 1.7444012979004057e-06, 'bagging_temperature': 0.0032172160094681907, 'random_strength': 0.0007630378040087104, 'border_count': 217}
+r2:  0.9983315296989411
 '''
 ############################ 파라미터 설명  ##############################
 # iterations: 부스팅 라운드의 수를 나타냅니다. 부스팅 라운드는 모델이 학습 데이터를 반복해서 학습하는 횟수를 말합니다. 
