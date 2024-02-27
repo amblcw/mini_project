@@ -4,7 +4,7 @@ import pickle
 import os.path
 import datetime as dt
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, RobustScaler
-from preprocessing import load_bus, load_deay, load_passenger, load_weather
+from preprocessing import load_bus, load_delay, load_passenger, load_weather
 from sklearn.model_selection import train_test_split
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_squared_error
@@ -18,7 +18,7 @@ import time
 bus_csv = load_bus()
 passenger_csv = load_passenger()
 weather_csv = load_weather()
-delay_csv = load_deay()
+delay_csv = load_delay()
 
 # 레이블 선택
 bus = bus_csv

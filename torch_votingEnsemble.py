@@ -208,12 +208,24 @@ if RNN_MODE:
                                 verbose=0,
                                 )
 
+
+
 my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x.shape[1],output_shape=1),
                             max_epochs=1000,
                             device=device,
                             criterion=nn.MSELoss,
                             optimizer=torch.optim.Adam,
                             )
+
+xgb_params = {'learning_rate': 0.2218036245351803,
+              'n_estimators': 199,
+              'max_depth': 3,
+              'min_child_weight': 0.07709868781803283,
+              'subsample': 0.80309973945344,
+              'colsample_bytree': 0.9254025887963853,
+              'gamma': 6.628562492458777e-08,
+              'reg_alpha': 0.012998871754325427,
+              'reg_lambda': 0.10637051171111844}
 
 model = None
 if RNN_MODE:
@@ -228,7 +240,7 @@ else:
         ('My_DNN',my_dnn),
         # ('MyLSTM',my_lstm),
         ('RandomForestRegressor',RandomForestRegressor()),
-        ('XGBRegressor',XGBRegressor()),
+        ('XGBRegressor',XGBRegressor(**xgb_params)),
     ])
     
 """ 
