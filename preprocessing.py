@@ -214,7 +214,7 @@ def scaling(dataset,scaler_type='minmax'):
             scaler.fit(data)
         scaled_data = scaler.transform(data)
         dataset[label] = scaled_data
-    return dataset
+    return dataset, scaler
 
 def scaling_col_by_col(dataset,scaler_type='minmax'):
     scaler_dict = {'minmax':MinMaxScaler(),'maxabs':MaxAbsScaler(),'standard':StandardScaler(),'robust':RobustScaler()}
@@ -224,27 +224,39 @@ def scaling_col_by_col(dataset,scaler_type='minmax'):
         data = data.reshape(-1,1)
         scaled_data = scaler.fit_transform(data)
         dataset[label] = scaled_data
-    return dataset
+    return dataset, scaler
 
-def load_passenger():
+def load_passenger(return_scaler=False)->pd.DataFrame:
     passenger_csv = make_passenger_csv()
-    passenger_csv = scaling(passenger_csv,'maxabs')
-    return passenger_csv
+    cols = passenger_csv.columns
+    passenger_csv, scaler = scaling(passenger_csv,'maxabs')
+    if return_scaler:
+        return pd.DataFrame(passenger_csv,columns=cols), scaler
+    return pd.DataFrame(passenger_csv,columns=cols)
 
-def load_delay():
+def load_delay(return_scaler=False)->pd.DataFrame:
     delay_csv = make_delay_csv()
-    delay_csv = scaling(delay_csv,'minmax')
-    return delay_csv
+    cols = delay_csv.columns
+    delay_csv, scaler = scaling(delay_csv,'minmax')
+    if return_scaler:
+        return pd.DataFrame(delay_csv,columns=cols), scaler
+    return pd.DataFrame(delay_csv,columns=cols)
 
-def load_weather():
+def load_weather(return_scaler=False)->pd.DataFrame:
     weather_csv = make_weather_csv()
-    weather_csv = scaling_col_by_col(weather_csv,'standard')
-    return weather_csv
+    cols = weather_csv.columns
+    weather_csv, scaler = scaling_col_by_col(weather_csv,'standard')
+    if return_scaler:
+        return pd.DataFrame(weather_csv,columns=cols), scaler
+    return pd.DataFrame(weather_csv,columns=cols)
 
-def load_bus():
+def load_bus(return_scaler=False)->pd.DataFrame:
     bus_csv = make_bus_csv()
-    bus_csv = scaling(bus_csv,'minmax')
-    return bus_csv
+    cols = bus_csv.columns
+    bus_csv, scaler = scaling(bus_csv,'minmax')
+    if return_scaler:
+        return pd.DataFrame(bus_csv,columns=cols), scaler
+    return pd.DataFrame(bus_csv,columns=cols)
 
 if __name__ == "__main__":
     # print(passenger_csv)
