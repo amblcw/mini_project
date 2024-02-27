@@ -58,6 +58,7 @@ x2_test_scaled = scaler2.transform(x2_test)
 # 데이터 연결(모든 데이터 이용시)
 x_train = np.concatenate((x1_train_scaled, x2_train_scaled), axis=1)
 x_test = np.concatenate((x1_test_scaled, x2_test_scaled), axis=1)
+print("x train shape", x_train.shape)
 s_t = time.time()
 def objective(trial):
     params = {

@@ -15,95 +15,75 @@ from torcheval.metrics import R2Score
 import copy
 from skorch import NeuralNetRegressor
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import VotingRegressor, RandomForestRegressor
+from sklearn.ensemble import VotingRegressor, RandomForestRegressor, AdaBoostRegressor
 from xgboost import XGBRegressor
-
+from catboost import CatBoostRegressor 
+from sklearn.svm import SVR
+from sklearn.linear_model import LinearRegression
+from lightgbm import LGBMRegressor
+from sklearn.metrics import mean_squared_error
+import pickle
 
 print(torch.__version__)    # 2.2.0+cu118
 
-# x = np.array([[1,2,3],[2,3,4],[3,4,5],[4,5,6],[5,6,7],[6,7,8],[7,8,9]]).reshape(-1,3,1)
-# y = np.array([4,5,6,7,8,9,10]).astype(np.float32)
-# print(x.shape,y.shape) # (7, 3, 1) (7,)
 
-RNN_MODE = False
-
-if RNN_MODE:
+def data_gen():
+    from sklearn.preprocessing import MinMaxScaler, MaxAbsScaler, StandardScaler, RobustScaler
+    from sklearn.model_selection import train_test_split
+    # 데이터 로드
+    bus_csv = load_bus()
     passenger_csv = load_passenger()
-    x, y = split_xy(passenger_csv,24)
-    print(x.shape,y.shape)
-else:
     weather_csv = load_weather()
     delay_csv = load_delay()
-    concat_csv = pd.DataFrame()
-    for label in weather_csv:
-        concat_csv[label] = weather_csv[label]
-    for label in delay_csv:
-        concat_csv[label] = delay_csv[label]
-    print(concat_csv.shape)
-    # print(weather_csv.head(24))
-    x, y = split_xy(concat_csv,1,y_col=3)
-    print("Weather")
 
-    x = x.reshape(x.shape[0],x.shape[1]*x.shape[2])
-    print(x.shape,y.shape)
+    # 레이블 선택
+    bus = bus_csv
+    passenger = passenger_csv
+    weather = weather_csv
+    x1 = weather
+    x2 = delay_csv
+    # y = delay_csv['1호선지연(분)']
+    # y = delay_csv['2호선지연(분)']
+    # y = delay_csv['3호선지연(분)']
+    # y = delay_csv['4호선지연(분)']
+    # y = delay_csv['5호선지연(분)']
+    # y = delay_csv['6호선지연(분)']
+    # y = delay_csv['7호선지연(분)']
+    y = delay_csv['8호선지연(분)']
 
-    print(x[-24:])
-    print(y[-24:])
-    # x = x.astype(np.float32)
-    # y = y.astype(np.float32)
-    x = torch.FloatTensor(x)
-    y = torch.FloatTensor(y)
+    # print(pd.value_counts(y))
 
-# x = pd.DataFrame(x)
-# y = pd.Series(y)
-# print(x.isna().sum()) # 결측치 없음
-# print(y.isna().sum())    # 결측치 없음
+    # 훈련 및 테스트 데이터 분할(원하는 상황으로 주석처리를 바꾸기)
+    x1_train, x1_test, x2_train, x2_test, y_train, y_test = train_test_split(
+        x1,x2, y, train_size=0.9, random_state=100, stratify=y)
 
-# print(x.head)
-# print(y.head)
-# print(np.dtype(x))
-# print(np.dtype(y))
+    # 스케일링(모든 데이터 이용시)
+    scaler1 = StandardScaler()
+    scaler2 = MinMaxScaler()
+    scaler3 = RobustScaler()
+    # scaler = MaxAbsScaler()
+    x1_train_scaled = scaler1.fit_transform(x1_train)
+    x1_test_scaled = scaler1.transform(x1_test)
 
-np.save('./data/temp_x',x)
-np.save('./data/temp_y',y)
+    x2_train_scaled = scaler2.fit_transform(x2_train)
+    x2_test_scaled = scaler2.transform(x2_test)
 
-# x = np.load('./data/temp_x.npy')
-# y = np.load('./data/temp_y.npy')
-
-class CustomImageDataset(Dataset):
-    def __init__(self,x_data,y_data,transform=None) -> None:    # 생성자, x,y데이터, 변환함수 설정
-        self.x_data = x_data
-        self.y_data = y_data
-        self.transform = transform
-        
-    def __len__(self):          # 어떤 값을 길이로서 반환할지
-        return len(self.y_data)
+    # 스케일링(각각)
+    # x_train = scaler.fit_transform(x_train)
+    # x_test = scaler.transform(x_test)
+    # 데이터 연결(모든 데이터 이용시)
+    x_train = np.concatenate((x1_train_scaled, x2_train_scaled), axis=1)
+    x_test = np.concatenate((x1_test_scaled, x2_test_scaled), axis=1)
     
-    def __getitem__(self, idx): # 인덱스가 들어왔을 때 어떻게 값을 반환할지 
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-        
-        image = torch.FloatTensor(self.x_data[idx].copy())  # torchTensor 형식으로 변환
-        label = self.y_data[idx].copy()                     # 얘는 9를 변환하면 사이즈9짜리 텐서로 만들어버리기에 그냥 이대로 사용
-        sample = image, label                               # 반드시 x, y 순으로 반환할 것
-        
-        if self.transform:  # 전처리 함수 적용
-            sample = self.transform(sample)
-            
-        return sample
+    x_train = x_train.astype(np.float32)
+    x_test = x_test.astype(np.float32)
+    y_train = y_train.astype(np.float32)
+    y_test = y_test.astype(np.float32)
+    
+    return x_train, y_train, x_test, y_test
 
-
-training_data = CustomImageDataset(x,y) # 인스턴스 선언 및 데이터 지정
-
-BATCH_SIZE = 128
-train_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=True)  # 만든 커스텀 데이터를 iterator형식으로 변경
-test_dataloader = DataLoader(training_data,batch_size=BATCH_SIZE, pin_memory=True)
-
-# for X, y in test_dataloader:    # dataloader는 인덱스로 접근이 되지 않으며 .next()또한 사용할 수 없다 오직 for문만 가능하며 그렇기에 출력을 위해 한바퀴 돌자마자 break한다
-#     print(f"Shape of X [N, C, H, W]: {X.shape}")
-#     print(f"Shaep of y: {y.shape} {y.dtype}")
-#     break
-
+x_train, y_train, x_test, y_test = data_gen()
+print(f"{x_train.shape=},{y_train.shape=},{x_test.shape=},{y_test.shape=}")
 
 device = (
     # "cpu"
@@ -196,21 +176,7 @@ class MyLSTM(nn.Module):
         # print("x size at final",x.size())
         return out
     
-# model = TorchLSTM(1,(3,1),1).to(device)
-# model = MyLSTM(num_classes=1, input_shape=x.shape[1:], hidden_size=128, num_layers=1).to(device)
-if RNN_MODE:
-    my_lstm = NeuralNetRegressor(MyLSTM(num_classes=1, input_shape=x.shape[1:], hidden_size=128, num_layers=1),
-                                max_epochs=1000, 
-                                device=device,
-                                criterion=nn.MSELoss,
-                                optimizer = torch.optim.Adam,
-                                optimizer__lr = 0.01,
-                                verbose=0,
-                                )
-
-
-
-my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x.shape[1],output_shape=1),
+my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x_train.shape[1],output_shape=1),
                             max_epochs=1000,
                             device=device,
                             criterion=nn.MSELoss,
@@ -227,116 +193,53 @@ xgb_params = {'learning_rate': 0.2218036245351803,
               'reg_alpha': 0.012998871754325427,
               'reg_lambda': 0.10637051171111844}
 
-model = None
-if RNN_MODE:
-    model = VotingRegressor([
-    #     ('My_DNN',my_dnn),
-        ('MyLSTM',my_lstm),
-        # ('RandomForestRegressor',RandomForestRegressor()),
-        ('XGBRegressor',XGBRegressor()),
-    ])
-else:
-    model = VotingRegressor([
-        ('My_DNN',my_dnn),
-        # ('MyLSTM',my_lstm),
-        ('RandomForestRegressor',RandomForestRegressor()),
-        ('XGBRegressor',XGBRegressor(**xgb_params)),
-    ])
-    
-""" 
-loss_fn = nn.MSELoss()
-# loss_fn = nn.CrossEntropyLoss() # 이 함수에 softmax가 내재되어있기에 모델에서 softmax를 쓰면 안된다
-optimizer = torch.optim.Adam(model.parameters())
 
-def train(dataloader, model, loss_fn, optimizer, verbose=True):
-    model.train()
-    size = len(dataloader.dataset)
-    for batch, (X,y) in enumerate(dataloader):
-        X, y = X.to(device), y.to(device)
-        
-        # 예측 오류 계산
-        pred = model(X)
-        pred = pred.to(device)
-        loss = loss_fn(pred, y)
-        
-        # 역전파
-        optimizer.zero_grad()   # 역전파하기 전에 기울기를 0으로 만들지 않으면 전의 학습이 영향을 준다
-        loss.backward()         # 역전파 계산
-        optimizer.step()        # 역전파 계산에 따라 파라미터 업데이트(이 시점에서 가중치가 업데이트 된다)
-        
-        if (batch % 10 == 0) and verbose:
-            loss, current = loss.item(), (batch+1)*len(X)
-            print(f"loss: {loss:>7f} [{current:>5d}/{size:>5d}]")
-            
-def test(dataloader, model, loss_fn):
-    size = len(dataloader.dataset)
-    num_batches = len(dataloader)
-    # print("size check: ",size,num_batches) # size는 테스트 데이터의 개수, num_batches는 batch_size에 의해 몇 바퀴 도는지
-    model.eval()    # 모델을 평가 모드로 전환, Dropout이나 BatchNomalization등을 비활성화
-    test_loss, correct = 0, 0
+model = VotingRegressor([
+    ('My_DNN',my_dnn),
+    # ('MyLSTM',my_lstm),
+    ('RandomForestRegressor',RandomForestRegressor()),
+    ('XGBRegressor',XGBRegressor(**xgb_params)),
+    # ('CatBoostRegressor',CatBoostRegressor()), # error
+    # ('AdaBoostRegressor',AdaBoostRegressor()),
+    # ('LGBMRegressor',LGBMRegressor()),
+    # ('SVR',SVR()),
+    # ('LinearRegression',LinearRegression()),
+])
     
-    
-    with torch.no_grad():
-        for X, y in dataloader:
-            X, y = X.to(device), y.to(device)
-            pred = model(X)
-            pred = pred.reshape(-1)
-            pred = pred.to(device)
-            test_loss += loss_fn(pred, y).item()
-            metric = R2Score().to(device)
-            metric.update(pred,y).to(device)
-            r2 = metric.compute()
-            
-            correct += r2 
-    test_loss /= num_batches    
-    correct /= num_batches
-    print(f"Test Error \n R2: {(correct):>0.4f}, Avg loss: {test_loss:>8f}\n")
-    return test_loss
-    
-if __name__ == '__main__':
-    print(f"Using {device} device")
-    print(model)
-    
-    EPOCHS = 500
-    PATIENCE = 500
-    best_loss = 987654321
-    best_model = None
-    patience_count = 0
-    for t in range(EPOCHS):
-        print(f"Epoch {t+1}\n---------------------")
-        train(train_dataloader, model, loss_fn, optimizer,verbose=False)
-        loss = test(test_dataloader, model, loss_fn)
-        if loss < best_loss:
-            best_loss = loss
-            best_model = copy.deepcopy(model)   # restore best weight 구현
-            patience_count = 0
-        else:
-            patience_count += 1
-            
-        if patience_count >= PATIENCE:
-            print("Early Stopped")
-            break
+hist = model.fit(x_train,y_train)
+r2 = model.score(x_test,y_test)
+y_predict = model.predict(x_test)
+loss = mean_squared_error(y_predict,y_test)
+y_submit_csv = pd.DataFrame()
+y_submit_csv['true'] = y_test
+y_submit_csv['pred'] = y_predict
+y_submit_csv.to_csv(f'./data/weather_delay_result_loss{loss:.6f}.csv')
+# model.save(f'./data/weather_delay_result_loss{loss:.6f}.h5')
 
-    print("===== best model =====")
-    test(test_dataloader,best_model,loss_fn)
-    print("Best loss: ",best_loss)
-    print("Done")
-    
-    # print(x[:10],y[:10])
-    # with torch.no_grad():
-    #     model.eval()
-    #     pred = model(x)
-    #     metric = R2Score()
-    #     metric.update(x,y)
-    #     metric.compute()
-    # import os
-    # dir_path = os.getcwd()
-    # print(dir_path)
-    # torch.save(model.state_dict(), dir_path+"./python/torch_model_save/torch_LSTM_model.pth")
-    # print("Model saved") """
-    
-model.fit(x,y)
-r2 = model.score(x,y)
-y_predict = model.predict(x)
+print("R2:   ",r2)
+print("LOSS: ",loss)
 
-print("R2: ",r2)
+
+s = pickle.dumps(model)
+print("path?: ",s)
+model2 = pickle.loads(s)
+loss2 = model2.score(x_test,y_test)
+print("loss2: ",loss2)
+
+import matplotlib.pyplot as plt
+
+# only my_dnn
+# R2:    0.7944192166720178
+# LOSS:  0.00019496497
+
+# only XGBRegressor
+# R2:    0.9988251359529255
+# LOSS:  1.1141963e-06
+
+# only RandomForestRegressor
+# R2:    0.9960478186615606
+# LOSS:  3.748097635884988e-06
+
+# ensemble
+# R2:    0.9845163056902212
+# LOSS:  1.4684143531775118e-05
