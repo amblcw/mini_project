@@ -26,8 +26,9 @@ from sklearn.model_selection import train_test_split
 
 print(torch.__version__)    # 2.2.0+cu118
 
+
 # 변수 설정
-LINE_NUM = 8
+STATION_NUM = 150
 
 device = (
     # "cpu"
@@ -39,25 +40,26 @@ device = (
 )
 
 # data
-def data_gen():
+def data_gen(station_num):
     # 데이터 로드
     bus_csv = load_bus()
     passenger_csv, passenger_scaler = load_passenger(return_scaler=True)
     weather_csv = load_weather()
     
-    print(bus_csv.shape,weather_csv.shape,passenger_csv.shape)  # (5832, 2) (5832, 3) (5832, 282)
+    station_list = list(passenger_csv.columns)
+    # print(bus_csv.shape,weather_csv.shape,passenger_csv.shape)  # (5832, 2) (5832, 3) (5832, 282)
     
     df = pd.DataFrame(np.concatenate((bus_csv, weather_csv, passenger_csv,), axis=1))
-    print(df.shape) # (5832, 287)
+    # print(df.shape) # (5832, 287)
     data = pd.DataFrame()
     y = pd.DataFrame()
     data = df.iloc[:-1,:]
-    y = df.iloc[1:,-1] # 5부터 역명
+    y = df.iloc[1:,station_list.index(station_num)+5] # 5부터 역명
     # for idx in range(len(df)-1):
     #     data = pd.concat([data,df.iloc[idx].copy()],axis=0)
     #     y = pd.concat([y,df.iloc[idx+1,5:].copy()],axis=0)
 
-    print(f"{data.shape=},  {y.shape=}")
+    # print(f"{data.shape=},  {y.shape=}")
     # 훈련 및 테스트 데이터 분할(원하는 상황으로 주석처리를 바꾸기)
     x_train, x_test, y_train, y_test = train_test_split(
         data, y, train_size=0.9, random_state=100)
@@ -69,8 +71,8 @@ def data_gen():
     
     return x_train, y_train, x_test, y_test, passenger_scaler
 
-x_train, y_train, x_test, y_test, delay_scaler = data_gen()
-print(f"{x_train.shape=},{y_train.shape=},{x_test.shape=},{y_test.shape=}")
+x_train, y_train, x_test, y_test, delay_scaler = data_gen(STATION_NUM)
+# print(f"{x_train.shape=},{y_train.shape=},{x_test.shape=},{y_test.shape=}")
 
 # model
 class TorchLSTM(nn.Module):
@@ -201,29 +203,109 @@ model = VotingRegressor([
     # ('SVR',SVR()),
     ('LinearRegression',LinearRegression()),
 ])
+
+def passenger_predict(station_num)->np.ndarray:
+    x_train, y_train, x_test, y_test, delay_scaler = data_gen(station_num)
     
-# fit & eval
-hist = model.fit(x_train,y_train)
-r2 = model.score(x_test,y_test)
-y_predict = model.predict(x_test)
-loss = mean_squared_error(y_predict,y_test)
-print("R2:   ",r2)
-print("LOSS: ",loss)
+    xgb_params = {'learning_rate': 0.13349839953884737,
+                'n_estimators': 99,
+                'max_depth': 8,
+                'min_child_weight': 3.471164143831403e-06,
+                'subsample': 0.6661302167437514,
+                'colsample_bytree': 0.9856906281904222,
+                'gamma': 4.5485144879936555e-06,
+                'reg_alpha': 0.014276113125688179,
+                'reg_lambda': 10.121476098960851}
 
-# 결과를 파일로 저장해서 확인
-y_test_1 = delay_scaler.inverse_transform(np.asarray(y_test).reshape(-1,1))
-y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
-y_submit_csv = pd.DataFrame()
-y_submit_csv['true'] = y_test_1.reshape(-1)
-y_submit_csv['pred'] = np.around(y_predict_1.reshape(-1))
-y_submit_csv.to_csv(f'./data/passenger_ensemble_R2_{r2:.8f}.csv')
+    cat_params = {'iterations': 258,
+                'learning_rate': 0.10372129288289585,
+                'depth': 4,
+                'l2_leaf_reg': 7.502013869614672,
+                'bagging_temperature': 0.0006871304265196931,
+                'random_strength': 0.002522427032110104,
+                'border_count': 348}
 
-# 모델 저장
-PATH = f'./data/model_save/'
-pickle.dump(model,open(PATH+f'passenger_ensemble_R2_{r2:.8f}.pkl', 'wb'))
-model2 = pickle.load(open(PATH+f'passenger_ensemble_R2_{r2:.8f}.pkl', 'rb'))
-model2_R2 = model2.score(x_test,y_test)
-print("model2_R2: ",model2_R2)
+    lgbm_params = {'learning_rate': 0.27047557712428816,
+                'n_estimators': 84,
+                'num_leaves': 18,
+                'max_depth': 6,
+                'min_child_samples': 19,
+                'subsample': 0.6791274154754994,
+                'colsample_bytree': 0.8780923690420561,
+                'reg_alpha': 0.030054587470444684,
+                'reg_lambda': 5.627270968507918,
+                'min_split_gain': 2.7094312530442e-07,
+                'min_child_weight': 8.308879346847586e-06,
+                'cat_smooth': 59}
+
+    model = VotingRegressor([
+        # ('My_DNN',my_dnn),
+        # ('MyLSTM',my_lstm),
+        ('RandomForestRegressor',RandomForestRegressor()),
+        ('XGBRegressor',XGBRegressor(**xgb_params)),
+        ('CatBoostRegressor',CatBoostRegressor(**cat_params)), # error
+        # ('AdaBoostRegressor',AdaBoostRegressor()),
+        ('LGBMRegressor',LGBMRegressor(**lgbm_params)),
+        # ('SVR',SVR()),
+        ('LinearRegression',LinearRegression()),
+    ])
+    
+    import os.path
+    PATH = f'./data/model_save/'
+    if os.path.exists(PATH+f'passenger_ensemble_{station_num}.pkl'):
+        model = pickle.load(open(PATH+f'passenger_ensemble_{station_num}.pkl', 'rb'))
+    else:
+    # fit & eval
+        model.fit(x_train,y_train)
+    r2 = model.score(x_test,y_test)
+    y_predict = model.predict(x_test)
+    loss = mean_squared_error(y_predict,y_test)
+    print("R2:   ",r2)
+    print("LOSS: ",loss)
+
+    # 결과를 파일로 저장해서 확인
+    y_test_1 = delay_scaler.inverse_transform(np.asarray(y_test).reshape(-1,1))
+    y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
+    y_submit_csv = pd.DataFrame()
+    y_test_1 = y_test_1.reshape(-1)
+    y_predict_1 = np.around(y_predict_1.reshape(-1))
+    y_submit_csv['true'] = y_test_1
+    y_submit_csv['pred'] = y_predict_1
+    y_submit_csv.to_csv(f'./data/passenger_ensemble_R2_{r2:.8f}.csv')
+
+    # 모델 저장
+    pickle.dump(model,open(PATH+f'passenger_ensemble_{STATION_NUM}.pkl', 'wb'))
+    return y_predict_1
+
+if __name__ == '__main__':
+    result = passenger_predict(152)
+    print(type(result))
+    
+    """ 
+    # fit & eval
+    hist = model.fit(x_train,y_train)
+    r2 = model.score(x_test,y_test)
+    y_predict = model.predict(x_test)
+    loss = mean_squared_error(y_predict,y_test)
+    print("R2:   ",r2)
+    print("LOSS: ",loss)
+
+    # 결과를 파일로 저장해서 확인
+    y_test_1 = delay_scaler.inverse_transform(np.asarray(y_test).reshape(-1,1))
+    y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
+    y_submit_csv = pd.DataFrame()
+    y_submit_csv['true'] = y_test_1.reshape(-1)
+    y_submit_csv['pred'] = np.around(y_predict_1.reshape(-1))
+    y_submit_csv.to_csv(f'./data/passenger_ensemble_R2_{r2:.8f}.csv')
+
+    # 모델 저장
+    PATH = f'./data/model_save/'
+    pickle.dump(model,open(PATH+f'passenger_ensemble_{STATION_NUM}.pkl', 'wb'))
+    # pickle.dump(model,open(PATH+f'passenger_ensemble_R2_{r2:.8f}.pkl', 'wb'))
+    # model2 = pickle.load(open(PATH+f'passenger_ensemble_R2_{r2:.8f}.pkl', 'rb'))
+    # model2_R2 = model2.score(x_test,y_test)
+    # print("model2_R2: ",model2_R2)
+ """
 
 
 # only my_dnn
