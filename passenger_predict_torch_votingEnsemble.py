@@ -26,10 +26,7 @@ from sklearn.model_selection import train_test_split
 
 print(torch.__version__)    # 2.2.0+cu118
 
-
 # 변수 설정
-STATION_NUM = 150
-
 device = (
     # "cpu"
     "cuda"
@@ -55,12 +52,7 @@ def data_gen(station_num):
     y = pd.DataFrame()
     data = df.iloc[:-1,:]
     y = df.iloc[1:,station_list.index(station_num)+5] # 5부터 역명
-    # for idx in range(len(df)-1):
-    #     data = pd.concat([data,df.iloc[idx].copy()],axis=0)
-    #     y = pd.concat([y,df.iloc[idx+1,5:].copy()],axis=0)
-
-    # print(f"{data.shape=},  {y.shape=}")
-    # 훈련 및 테스트 데이터 분할(원하는 상황으로 주석처리를 바꾸기)
+ 
     x_train, x_test, y_train, y_test = train_test_split(
         data, y, train_size=0.9, random_state=100)
     
@@ -71,27 +63,7 @@ def data_gen(station_num):
     
     return x_train, y_train, x_test, y_test, passenger_scaler
 
-x_train, y_train, x_test, y_test, delay_scaler = data_gen(STATION_NUM)
-# print(f"{x_train.shape=},{y_train.shape=},{x_test.shape=},{y_test.shape=}")
-
-# model
-class TorchLSTM(nn.Module):
-    def __init__(self,input_shape,output_shape) -> None:
-        super().__init__()
-        # self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.LSTM(input_shape,256,batch_first=True),
-            nn.ReLU(),
-            nn.Linear(256,128),
-            nn.ReLU(),
-            nn.Linear(128,output_shape)
-        )
-        
-    def forward(self,x):
-        # x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-    
+# model  
 class TorchDNN(nn.Module):
     def __init__(self,input_shape,output_shape) -> None:
         super().__init__()
@@ -103,107 +75,19 @@ class TorchDNN(nn.Module):
             nn.Linear(128,output_shape,device=device)
         )
         
-    def forward(self,x):
+    def forward(self, x=None, *args, **x_dict):
+        print("x:",x,"\nargs: ", args,"\nx_dict: ", x_dict)
+        if type(x) == None and x_dict:
+            print("x is dict")
+            x_dict_old_keys = list(x_dict.keys())
+            x_dict_new_keys = np.array(x_dict_old_keys).astype(str)
+            for old_key, new_key in zip(x_dict_old_keys,x_dict_new_keys):
+                x_dict[new_key] = x_dict.pop(old_key)
+            x = x_dict
         logits = self.linear_relu_stack(x)
         logits = logits.reshape(-1,)
         return logits
     
-class MyLSTM(nn.Module):
-    def __init__(self, num_classes, input_shape, hidden_size, num_layers) -> None:
-        super(MyLSTM, self).__init__()
-        
-        self.num_classes = num_classes
-        self.num_layers  = num_layers
-        self.input_size  = input_shape[0]
-        self.hidden_size = hidden_size
-        self.seq_length  = input_shape[1]
-        # self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
-        #                     num_layers=num_layers, batch_first=True)
-        self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32, kernel_size=3, stride=1, padding=1, device=device)
-        self.lstm = nn.LSTM(input_size=self.seq_length, hidden_size=hidden_size, device=device,
-                            num_layers=num_layers, batch_first=True)
-        self.fc = nn.Sequential(
-            nn.Linear(hidden_size, 128, device=device),
-            nn.ReLU(),
-            nn.Linear(128,64, device=device),
-            nn.ReLU(),
-            nn.BatchNorm1d(64, device=device),
-            nn.Dropout(0.01),
-            nn.Linear(64,32, device=device),
-            nn.ReLU(),
-            # nn.Linear(32,16, device=device),
-            # nn.ReLU(),
-            nn.Dropout(0.01),
-            nn.Linear(32,num_classes)
-        )
-    
-    def forward(self, x=None, *args, **x_dict):
-        # print("x:",x,"\nargs: ", args,"\nx_dict: ", x_dict)
-        # if type(x) == None and x_dict:
-        #     print("x is dict")
-        #     x_dict_old_keys = list(x_dict.keys())
-        #     x_dict_new_keys = np.array(x_dict_old_keys).astype(str)
-        #     for old_key, new_key in zip(x_dict_old_keys,x_dict_new_keys):
-        #         x_dict[new_key] = x_dict.pop(old_key)
-        #     x = x_dict
-        x = self.conv1d(x)
-        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        ula, (h_out, c_out) = self.lstm(x, (h_0,c_0))
-        h_out = h_out.view(-1, self.hidden_size)   
-        out = self.fc(h_out)
-        return out
-    
-my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x_train.shape[1],output_shape=1),
-                            max_epochs=1000,
-                            device=device,
-                            criterion=nn.MSELoss,
-                            optimizer=torch.optim.Adam,
-                            )
-
-xgb_params = {'learning_rate': 0.13349839953884737,
-              'n_estimators': 99,
-              'max_depth': 8,
-              'min_child_weight': 3.471164143831403e-06,
-              'subsample': 0.6661302167437514,
-              'colsample_bytree': 0.9856906281904222,
-              'gamma': 4.5485144879936555e-06,
-              'reg_alpha': 0.014276113125688179,
-              'reg_lambda': 10.121476098960851}
-
-cat_params = {'iterations': 258,
-              'learning_rate': 0.10372129288289585,
-              'depth': 4,
-              'l2_leaf_reg': 7.502013869614672,
-              'bagging_temperature': 0.0006871304265196931,
-              'random_strength': 0.002522427032110104,
-              'border_count': 348}
-
-lgbm_params = {'learning_rate': 0.27047557712428816,
-               'n_estimators': 84,
-               'num_leaves': 18,
-               'max_depth': 6,
-               'min_child_samples': 19,
-               'subsample': 0.6791274154754994,
-               'colsample_bytree': 0.8780923690420561,
-               'reg_alpha': 0.030054587470444684,
-               'reg_lambda': 5.627270968507918,
-               'min_split_gain': 2.7094312530442e-07,
-               'min_child_weight': 8.308879346847586e-06,
-               'cat_smooth': 59}
-
-model = VotingRegressor([
-    # ('My_DNN',my_dnn),
-    # ('MyLSTM',my_lstm),
-    ('RandomForestRegressor',RandomForestRegressor()),
-    ('XGBRegressor',XGBRegressor(**xgb_params)),
-    ('CatBoostRegressor',CatBoostRegressor(**cat_params)), # error
-    # ('AdaBoostRegressor',AdaBoostRegressor()),
-    ('LGBMRegressor',LGBMRegressor(**lgbm_params)),
-    # ('SVR',SVR()),
-    ('LinearRegression',LinearRegression()),
-])
-
 def passenger_predict(station_num)->np.ndarray:
     x_train, y_train, x_test, y_test, delay_scaler = data_gen(station_num)
     
@@ -238,6 +122,13 @@ def passenger_predict(station_num)->np.ndarray:
                 'min_child_weight': 8.308879346847586e-06,
                 'cat_smooth': 59}
 
+    my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x_train.shape[1],output_shape=1),
+                            max_epochs=1000,
+                            device=device,
+                            criterion=nn.MSELoss,
+                            optimizer=torch.optim.Adam,
+                            )
+
     model = VotingRegressor([
         # ('My_DNN',my_dnn),
         # ('MyLSTM',my_lstm),
@@ -252,11 +143,13 @@ def passenger_predict(station_num)->np.ndarray:
     
     import os.path
     PATH = f'./data/model_save/'
-    if os.path.exists(PATH+f'passenger_ensemble_{station_num}.pkl'):
-        model = pickle.load(open(PATH+f'passenger_ensemble_{station_num}.pkl', 'rb'))
-    else:
-    # fit & eval
-        model.fit(x_train,y_train)
+    # if os.path.exists(PATH+f'passenger_ensemble_{station_num}.pkl'):
+    #     model = pickle.load(open(PATH+f'passenger_ensemble_{station_num}.pkl', 'rb'))
+    # else:
+    # # fit & eval
+    #     model.fit(x_train,y_train)
+    model.fit(x_train,y_train) # 임시
+    
     r2 = model.score(x_test,y_test)
     y_predict = model.predict(x_test)
     loss = mean_squared_error(y_predict,y_test)
@@ -274,38 +167,13 @@ def passenger_predict(station_num)->np.ndarray:
     y_submit_csv.to_csv(f'./data/passenger_ensemble_R2_{r2:.8f}.csv')
 
     # 모델 저장
-    pickle.dump(model,open(PATH+f'passenger_ensemble_{STATION_NUM}.pkl', 'wb'))
+    pickle.dump(model,open(PATH+f'passenger_ensemble_{station_num}.pkl', 'wb'))
     return y_predict_1
 
 if __name__ == '__main__':
-    result = passenger_predict(152)
+    result = passenger_predict(150)
     print(type(result))
     
-    """ 
-    # fit & eval
-    hist = model.fit(x_train,y_train)
-    r2 = model.score(x_test,y_test)
-    y_predict = model.predict(x_test)
-    loss = mean_squared_error(y_predict,y_test)
-    print("R2:   ",r2)
-    print("LOSS: ",loss)
-
-    # 결과를 파일로 저장해서 확인
-    y_test_1 = delay_scaler.inverse_transform(np.asarray(y_test).reshape(-1,1))
-    y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
-    y_submit_csv = pd.DataFrame()
-    y_submit_csv['true'] = y_test_1.reshape(-1)
-    y_submit_csv['pred'] = np.around(y_predict_1.reshape(-1))
-    y_submit_csv.to_csv(f'./data/passenger_ensemble_R2_{r2:.8f}.csv')
-
-    # 모델 저장
-    PATH = f'./data/model_save/'
-    pickle.dump(model,open(PATH+f'passenger_ensemble_{STATION_NUM}.pkl', 'wb'))
-    # pickle.dump(model,open(PATH+f'passenger_ensemble_R2_{r2:.8f}.pkl', 'wb'))
-    # model2 = pickle.load(open(PATH+f'passenger_ensemble_R2_{r2:.8f}.pkl', 'rb'))
-    # model2_R2 = model2.score(x_test,y_test)
-    # print("model2_R2: ",model2_R2)
- """
 
 
 # only my_dnn
