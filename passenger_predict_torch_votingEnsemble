@@ -135,17 +135,21 @@ class MyLSTM(nn.Module):
             nn.Linear(32,num_classes)
         )
     
-    def forward(self, x):
-        # print("x size at first",x.size())
+    def forward(self, x=None, *args, **x_dict):
+        # print("x:",x,"\nargs: ", args,"\nx_dict: ", x_dict)
+        # if type(x) == None and x_dict:
+        #     print("x is dict")
+        #     x_dict_old_keys = list(x_dict.keys())
+        #     x_dict_new_keys = np.array(x_dict_old_keys).astype(str)
+        #     for old_key, new_key in zip(x_dict_old_keys,x_dict_new_keys):
+        #         x_dict[new_key] = x_dict.pop(old_key)
+        #     x = x_dict
         x = self.conv1d(x)
-        # print("x size at second",x.size())
         h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         ula, (h_out, c_out) = self.lstm(x, (h_0,c_0))
         h_out = h_out.view(-1, self.hidden_size)   
-        # print("x size at third",x.size())
         out = self.fc(h_out)
-        # print("x size at final",x.size())
         return out
     
 my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x_train.shape[1],output_shape=1),
@@ -165,16 +169,37 @@ xgb_params = {'learning_rate': 0.13349839953884737,
               'reg_alpha': 0.014276113125688179,
               'reg_lambda': 10.121476098960851}
 
+cat_params = {'iterations': 258,
+              'learning_rate': 0.10372129288289585,
+              'depth': 4,
+              'l2_leaf_reg': 7.502013869614672,
+              'bagging_temperature': 0.0006871304265196931,
+              'random_strength': 0.002522427032110104,
+              'border_count': 348}
+
+lgbm_params = {'learning_rate': 0.27047557712428816,
+               'n_estimators': 84,
+               'num_leaves': 18,
+               'max_depth': 6,
+               'min_child_samples': 19,
+               'subsample': 0.6791274154754994,
+               'colsample_bytree': 0.8780923690420561,
+               'reg_alpha': 0.030054587470444684,
+               'reg_lambda': 5.627270968507918,
+               'min_split_gain': 2.7094312530442e-07,
+               'min_child_weight': 8.308879346847586e-06,
+               'cat_smooth': 59}
+
 model = VotingRegressor([
     # ('My_DNN',my_dnn),
     # ('MyLSTM',my_lstm),
     ('RandomForestRegressor',RandomForestRegressor()),
     ('XGBRegressor',XGBRegressor(**xgb_params)),
-    # ('CatBoostRegressor',CatBoostRegressor()), # error
+    ('CatBoostRegressor',CatBoostRegressor(**cat_params)), # error
     # ('AdaBoostRegressor',AdaBoostRegressor()),
-    # ('LGBMRegressor',LGBMRegressor()),
+    ('LGBMRegressor',LGBMRegressor(**lgbm_params)),
     # ('SVR',SVR()),
-    # ('LinearRegression',LinearRegression()),
+    ('LinearRegression',LinearRegression()),
 ])
     
 # fit & eval
@@ -191,25 +216,46 @@ y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
 y_submit_csv = pd.DataFrame()
 y_submit_csv['true'] = y_test_1.reshape(-1)
 y_submit_csv['pred'] = np.around(y_predict_1.reshape(-1))
-y_submit_csv.to_csv(f'./data/weather_delay_LINE{LINE_NUM}_r2{r2:.8f}.csv')
+y_submit_csv.to_csv(f'./data/passenger_ensemble_R2_{r2:.8f}.csv')
 
 # 모델 저장
 PATH = f'./data/model_save/'
-pickle.dump(model,open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'wb'))
-model2 = pickle.load(open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'rb'))
+pickle.dump(model,open(PATH+f'passenger_ensemble_R2_{r2:.8f}.pkl', 'wb'))
+model2 = pickle.load(open(PATH+f'passenger_ensemble_R2_{r2:.8f}.pkl', 'rb'))
 model2_R2 = model2.score(x_test,y_test)
 print("model2_R2: ",model2_R2)
 
 
 # only my_dnn
 
+# only RandomForestRegressor
+# R2:    0.9481817800630611
+# LOSS:  1.75546211929742e-05
 
 # only XGBRegressor
 # R2:    0.9486495236740224
 # LOSS:  1.7396162220129257e-05
 
-# only RandomForestRegressor
-# R2:    0.9481817800630611
-# LOSS:  1.75546211929742e-05
+# only LGBMRegressor
+# R2:    0.9487035226063297
+# LOSS:  1.7377868832154276e-05
 
-# ensemble 1
+# only CatBoostRegressor
+# R2:    0.9445804646910017
+# LOSS:  1.8774650117739953e-05
+
+# ensemble cat, xgb, RF
+# R2:    0.9490893959460077
+# LOSS:  1.724714530836748e-05
+
+# ensemble cat, xgb, RF, LGBM 
+# R2:    0.9508556422551188
+# LOSS:  1.6648788496271948e-05
+
+# ensemble cat, xgb, RF, LGBM, LinearRegressor
+# R2:    0.951682501080484
+# LOSS:  1.6368670933819583e-05
+
+# ensemble cat, xgb, RF, LGBM, LinearRegressor, SVR
+# R2:    0.9187888084290099
+# LOSS:  2.7512170553016626e-05
