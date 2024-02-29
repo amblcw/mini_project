@@ -19,14 +19,14 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
     '''
     if departure_station == arrival_station:
         raise Exception(f"departure and arrival is same num {departure_station}")
-    line1 = np.arange(150,160)
-    line2 = np.arange(201,251)
-    line3 = np.arange(309,343)
-    line4 = np.arange(409,435)
-    line5 = np.arange(2511,2567)
-    line6 = np.arange(2611,2649)
-    line7 = np.arange(2711,2753)
-    line8 = np.arange(2811,2829)
+    line1 = np.arange(150,159+1)
+    line2 = np.arange(201,250+1)
+    line3 = np.arange(309,342+1)
+    line4 = np.arange(409,434+1)
+    line5 = np.arange(2511,2566+1)
+    line6 = np.arange(2611,2648+1)
+    line7 = np.arange(2711,2752+1)
+    line8 = np.arange(2811,2828+1)
     line_list = [line1,line2,line3,line4,line5,line6,line7,line8]
     line_num = None
     for idx, line in enumerate(line_list):
@@ -96,7 +96,7 @@ def decode_interval_csv(line_num)->pd.DataFrame:    # 데이터가 바뀌니 다
 
 
 if __name__ == '__main__':
-    result = is_max_at_station(2718, 2711, "2023-04-04 08:00:00")
+    result = is_max_at_station(2827, 2828, "2023-04-04 08:00:00")
     print(result)
     
     # decode_interval_csv(1)

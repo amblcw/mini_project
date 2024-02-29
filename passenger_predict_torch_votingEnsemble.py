@@ -136,7 +136,7 @@ def passenger_predict(station_num)->np.ndarray:
         # ('MyLSTM',my_lstm),
         ('RandomForestRegressor',RandomForestRegressor()),
         ('XGBRegressor',XGBRegressor(**xgb_params)),
-        ('CatBoostRegressor',CatBoostRegressor(**cat_params)), # error
+        # ('CatBoostRegressor',CatBoostRegressor(**cat_params)), # error
         # ('AdaBoostRegressor',AdaBoostRegressor()),
         ('LGBMRegressor',LGBMRegressor(**lgbm_params)),
         # ('SVR',SVR()),
