@@ -70,7 +70,13 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
     
     return isMax
 
+def decode_interval_csv(line_num)->pd.DataFrame:
+    path = './data/'
+    name = f'{line_num}호선_평균시간_결과.csv'
+    pass
+
+
 if __name__ == '__main__':
-    # print(type(datetime.today()),datetime.today())
-    result = is_max_at_station(2718, 2720, "2023-04-04 08:00:00")
-    print(result)
+    # result = is_max_at_station(2718, 2720, "2023-04-04 08:00:00")
+    # print(result)
+    pass

@@ -146,15 +146,14 @@ def delay_predict(line_num):
     pickle.dump(model,open(PATH+f'delay_ensemble_Line{LINE_NUM}.pkl', 'wb'))
     model2 = pickle.load(open(PATH+f'delay_ensemble_Line{LINE_NUM}.pkl', 'rb'))
     model2_R2 = model2.score(x_test,y_test)
-    print("model2_R2: ",model2_R2)
+    # print("model2_R2: ",model2_R2)
     
     return y_submit, r2, loss
 
 if __name__ == '__main__':
-    result = delay_predict(1)
-    for idx, data in enumerate(result[0].values):
-        print(f'{idx:<4} {data}')
-    print(f"R2: {result[1]}, LOSS:{result[2]}")
+    for i in range(1,9):
+        result = delay_predict(1)
+        print(f"R2: {result[1]}, LOSS:{result[2]}")
 
 # only my_dnn
 # R2:    0.7944192166720178
