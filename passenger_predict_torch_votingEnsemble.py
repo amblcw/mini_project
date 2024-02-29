@@ -159,7 +159,7 @@ def passenger_predict(station_num)->np.ndarray:
 
     # 결과를 파일로 저장해서 확인
     y_submit = delay_scaler.inverse_transform(y_submit.reshape(-1,1))
-    
+    y_submit = y_submit.reshape(-1)
 
     # 모델 저장
     pickle.dump(model,open(PATH+f'passenger_ensemble_{station_num}.pkl', 'wb'))

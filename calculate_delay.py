@@ -2,6 +2,8 @@ from passenger_predict_torch_votingEnsemble import passenger_predict
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import warnings
+warnings.filterwarnings('ignore')
 '''
 입력: 시작역 - 환승역 ... 환승역 - 도착역
 1. 각 역간의 이동 문제로 쪼개기
@@ -48,10 +50,12 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
     full_time_list = list(pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h').astype(str))
     date_idx = full_time_list.index(date)
     
-    passenger = 0
+    total_passenger = 0
     for station in target_stations:
         passenger, _, __ = passenger_predict(station)
-        passenger += int(passenger[date_idx])
+        print(passenger[date_idx])
+        total_passenger += int(passenger[date_idx])
+        print(f"{station} total_passenger {total_passenger}")
 
     trans_max_list = [2800,2800,2800,2800,2240,2240,2240,1680] # 호선별 최대 수송인원
     
@@ -59,11 +63,14 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
     1이면 낮은쪽부터, -1이면 큰쪽부터 가까운 역까지 승객 변동을 더하기 
     그리고 호선 별 편성당 수송인원과 비교해서 만석인지 아닌지 구하기    
     '''
+    print("total passenger",total_passenger)
     isMax = False
+    if total_passenger > trans_max_list[line_num]:
+        isMax = True
     
     return isMax
 
 if __name__ == '__main__':
     # print(type(datetime.today()),datetime.today())
-    result = is_max_at_station(156, 153, "2023-01-31 10:00:00")
+    result = is_max_at_station(2718, 2720, "2023-04-04 08:00:00")
     print(result)
