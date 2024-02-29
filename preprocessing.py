@@ -5,7 +5,7 @@ import os.path
 import datetime as dt
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, RobustScaler
 
-def make_passenger_csv(path=None, get_off=False): 
+def make_passenger_csv(path=None, getoff=False): 
     ''' 
     from: 2023년 1~8월 이용인원.csv
     return: pd.Dataframe
@@ -35,7 +35,7 @@ def make_passenger_csv(path=None, get_off=False):
     for idx, data in enumerate(passenger_csv.values):
         is_ride = 1
         station_num = data[1]
-        if get_off and data[1] == '승차':
+        if getoff and data[1] == '승차':
             continue
         if data[2] == '하차':
             is_ride = -1
@@ -228,8 +228,8 @@ def scaling_col_by_col(dataset,scaler_type='minmax'):
         dataset[label] = scaled_data
     return dataset, scaler
 
-def load_passenger(return_scaler=False)->pd.DataFrame:
-    passenger_csv = make_passenger_csv()
+def load_passenger(return_scaler=False, getoff=False)->pd.DataFrame:
+    passenger_csv = make_passenger_csv(getoff=getoff)
     cols = passenger_csv.columns
     passenger_csv, scaler = scaling(passenger_csv,'maxabs')
     if return_scaler:

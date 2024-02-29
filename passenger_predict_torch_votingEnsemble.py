@@ -23,7 +23,9 @@ from sklearn.metrics import mean_squared_error
 import pickle
 from sklearn.preprocessing import MinMaxScaler, MaxAbsScaler, StandardScaler, RobustScaler
 from sklearn.model_selection import train_test_split
-
+'''
+승하차 합산 승객 변동량 예측모델
+'''
 print(torch.__version__)    # 2.2.0+cu118
 
 # 변수 설정
