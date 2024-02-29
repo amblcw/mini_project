@@ -44,9 +44,10 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
     arrival_station_idx = int(np.where(line_list[line_num] == arrival_station)[0])
     if departure_station_idx > arrival_station_idx: # 하행
         ascending = False
-    target_stations = (target_line[:departure_station_idx] if ascending else target_line[departure_station_idx:])
+    # 상행인지 하행인지에 따라 더해야하는 역을 정함
+    target_stations = (target_line[:departure_station_idx] if ascending else target_line[departure_station_idx:]) 
     
-    date = str(date)[:14] + '00:00'
+    date = str(date)[:14] + '00:00' # 시간만 필요하므로 분과 초는 날림
     full_time_list = list(pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h').astype(str))
     date_idx = full_time_list.index(date)
     
@@ -70,13 +71,27 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
     
     return isMax
 
-def decode_interval_csv(line_num)->pd.DataFrame:
+def decode_interval_csv(line_num)->pd.DataFrame:    # 데이터가 바뀌니 다시 만들어야함
     path = './data/'
     name = f'{line_num}호선_평균시간_결과.csv'
+    interval_csv = pd.read_csv(path+name,index_col=0)
+    
+    interval_csv.fillna(method='ffill',inplace=True)
+    interval_csv['평균 시간'] = interval_csv['평균 시간'].str.replace("0 days ","")
+    date_format = r'%H:%M:%S'
+    for idx, data in enumerate(interval_csv.values):
+        data = str(data[0]).split(':')
+        sec = 0
+        for i, n in enumerate(data):
+            sec += round(float(n)) * (60 ** (2-i))
+        interval_csv.iloc[idx] = sec
+    print(interval_csv)
     pass
 
 
 if __name__ == '__main__':
     # result = is_max_at_station(2718, 2720, "2023-04-04 08:00:00")
     # print(result)
+    
+    decode_interval_csv(1)
     pass
