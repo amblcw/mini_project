@@ -61,7 +61,7 @@ def data_gen(station_num):
     y_train = y_train.astype(np.float32)
     y_test = y_test.astype(np.float32)
     
-    return x_train, y_train, x_test, y_test, passenger_scaler
+    return data, x_train, y_train, x_test, y_test, passenger_scaler
 
 # model  
 class TorchDNN(nn.Module):
@@ -89,7 +89,7 @@ class TorchDNN(nn.Module):
         return logits
     
 def passenger_predict(station_num)->np.ndarray:
-    x_train, y_train, x_test, y_test, delay_scaler = data_gen(station_num)
+    data, x_train, y_train, x_test, y_test, delay_scaler = data_gen(station_num)
     
     xgb_params = {'learning_rate': 0.13349839953884737,
                 'n_estimators': 99,
@@ -152,23 +152,18 @@ def passenger_predict(station_num)->np.ndarray:
     
     r2 = model.score(x_test,y_test)
     y_predict = model.predict(x_test)
+    y_submit = model.predict(data)
     loss = mean_squared_error(y_predict,y_test)
     print("R2:   ",r2)
     print("LOSS: ",loss)
 
     # 결과를 파일로 저장해서 확인
-    y_test_1 = delay_scaler.inverse_transform(np.asarray(y_test).reshape(-1,1))
-    y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
-    y_submit_csv = pd.DataFrame()
-    y_test_1 = y_test_1.reshape(-1)
-    y_predict_1 = np.around(y_predict_1.reshape(-1))
-    y_submit_csv['true'] = y_test_1
-    y_submit_csv['pred'] = y_predict_1
-    y_submit_csv.to_csv(f'./data/passenger_ensemble_R2_{r2:.8f}.csv')
+    y_submit = delay_scaler.inverse_transform(y_submit.reshape(-1,1))
+    
 
     # 모델 저장
     pickle.dump(model,open(PATH+f'passenger_ensemble_{station_num}.pkl', 'wb'))
-    return y_predict_1, r2, loss
+    return y_submit, r2, loss
 
 if __name__ == '__main__':
     passenger_csv = load_passenger()

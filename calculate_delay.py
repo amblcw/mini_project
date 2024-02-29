@@ -42,22 +42,18 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
     arrival_station_idx = int(np.where(line_list[line_num] == arrival_station)[0])
     if departure_station_idx > arrival_station_idx: # 하행
         ascending = False
-    # print(departure_station_idx,arrival_station_idx)
     target_stations = (target_line[:departure_station_idx] if ascending else target_line[departure_station_idx:])
-    # print(target_stations)
     
     date = str(date)[:14] + '00:00'
-    print("date",date)
     full_time_list = list(pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h').astype(str))
     date_idx = full_time_list.index(date)
-    print(date_idx, full_time_list[date_idx])
     
     passenger = 0
     for station in target_stations:
         passenger, _, __ = passenger_predict(station)
-        passenger = int(passenger[date_idx])
-        print("",passenger)
-    
+        passenger += int(passenger[date_idx])
+
+    trans_max_list = [2800,2800,2800,2800,2240,2240,2240,1680] # 호선별 최대 수송인원
     
     ''' 
     1이면 낮은쪽부터, -1이면 큰쪽부터 가까운 역까지 승객 변동을 더하기 
