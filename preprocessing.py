@@ -5,7 +5,7 @@ import os.path
 import datetime as dt
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, RobustScaler
 
-def make_passenger_csv(path=None): 
+def make_passenger_csv(path=None, get_off=False): 
     ''' 
     from: 2023년 1~8월 이용인원.csv
     return: pd.Dataframe
@@ -35,6 +35,8 @@ def make_passenger_csv(path=None):
     for idx, data in enumerate(passenger_csv.values):
         is_ride = 1
         station_num = data[1]
+        if get_off and data[1] == '승차':
+            continue
         if data[2] == '하차':
             is_ride = -1
         for i, passenger in enumerate(data[3:]):
