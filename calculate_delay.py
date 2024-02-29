@@ -96,7 +96,7 @@ def decode_interval_csv(line_num)->pd.DataFrame:    # 데이터가 바뀌니 다
 
 
 if __name__ == '__main__':
-    result = is_max_at_station(2718, 2720, "2023-04-04 08:00:00")
+    result = is_max_at_station(2718, 2711, "2023-04-04 08:00:00")
     print(result)
     
     # decode_interval_csv(1)
