@@ -68,13 +68,13 @@ def data_gen(line_num):
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, train_size=0.9, random_state=100, stratify=y)
     
+    x = x.astype(np.float32)
     x_train = x_train.astype(np.float32)
     x_test = x_test.astype(np.float32)
     y_train = y_train.astype(np.float32)
     y_test = y_test.astype(np.float32)
     
     return x, x_train, y_train, x_test, y_test, delay_scaler
-
 
 # model
 class TorchDNN(nn.Module):
@@ -93,9 +93,6 @@ class TorchDNN(nn.Module):
         logits = logits.reshape(-1,)
         return logits
     
-
-    
-
 def delay_predict(line_num):
     data, x_train, y_train, x_test, y_test, delay_scaler = data_gen(line_num)
     print(f"{x_train.shape=},{y_train.shape=},{x_test.shape=},{y_test.shape=}")
@@ -137,21 +134,27 @@ def delay_predict(line_num):
     print("R2:   ",r2)
     print("LOSS: ",loss)
 
-    ''' 여기 밑에 수정 요망'''
     # 결과를 파일로 저장해서 확인 
-    y_test_1 = delay_scaler.inverse_transform(np.asarray(y_test).reshape(-1,1))
-    y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
-    y_submit_csv = pd.DataFrame()
-    y_submit_csv['true'] = y_test_1.reshape(-1)
-    y_submit_csv['pred'] = np.around(y_predict_1.reshape(-1))
-    y_submit_csv.to_csv(f'./data/weather_delay_LINE{LINE_NUM}_r2{r2:.8f}.csv')
+    y_submit = model.predict(data)
+    y_submit = delay_scaler.inverse_transform(np.asarray(y_submit).reshape(-1,1))
+    y_submit = pd.DataFrame(y_submit.reshape(-1))
+    y_submit = np.around(y_submit)
+    y_submit.to_csv(f'./data/weather_delay_LINE{LINE_NUM}_r2{r2:.8f}.csv')
 
     # 모델 저장
-    PATH = f'./model_save/passenger_predict/'
-    pickle.dump(model,open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'wb'))
-    model2 = pickle.load(open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'rb'))
+    PATH = f'./model_save/delay_predict/'
+    pickle.dump(model,open(PATH+f'delay_ensemble_Line{LINE_NUM}.pkl', 'wb'))
+    model2 = pickle.load(open(PATH+f'delay_ensemble_Line{LINE_NUM}.pkl', 'rb'))
     model2_R2 = model2.score(x_test,y_test)
     print("model2_R2: ",model2_R2)
+    
+    return y_submit, r2, loss
+
+if __name__ == '__main__':
+    result = delay_predict(1)
+    for idx, data in enumerate(result[0].values):
+        print(f'{idx:<4} {data}')
+    print(f"R2: {result[1]}, LOSS:{result[2]}")
 
 # only my_dnn
 # R2:    0.7944192166720178
