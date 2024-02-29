@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import numpy as np
 from torchvision.io import read_image
-from preprocessing import load_bus, load_delay, load_passenger, load_weather
+from preprocessing import load_bus, load_delay, load_passenger, load_weather, make_passenger_csv
 from function_package import split_xy
 from sklearn.metrics import r2_score
 from torcheval.metrics import R2Score
@@ -144,9 +144,9 @@ def passenger_predict(station_num)->np.ndarray:
     ])
     
     import os.path
-    PATH = f'./model_save/passenger_predict/'
-    if os.path.exists(PATH+f'passenger_ensemble_{station_num}.pkl'):
-        model = pickle.load(open(PATH+f'passenger_ensemble_{station_num}.pkl', 'rb'))
+    PATH = f'./model_save/getoff_predict/'
+    if os.path.exists(PATH+f'getoff_ensemble_{station_num}.pkl'):
+        model = pickle.load(open(PATH+f'getoff_ensemble_{station_num}.pkl', 'rb'))
     else:
     # fit & eval
         model.fit(x_train,y_train)
@@ -164,21 +164,20 @@ def passenger_predict(station_num)->np.ndarray:
     y_submit = y_submit.reshape(-1)
 
     # 모델 저장
-    pickle.dump(model,open(PATH+f'passenger_ensemble_{station_num}.pkl', 'wb'))
+    pickle.dump(model,open(PATH+f'getoff_ensemble_{station_num}.pkl', 'wb'))
     return y_submit, r2, loss
 
 if __name__ == '__main__':
-    passenger_csv = load_passenger()
-    getoff_csv = data_gen()
-    # station_list = passenger_csv.columns
-    # print(station_list)
-    # r2_list = []
-    # for n, station_num in enumerate(station_list):
-    #     result = passenger_predict(station_num)
-    #     print(n+1,'/282')
-    #     r2_list.append(result[1])
-    # print(r2_list)
-    # print("DONE")
+    passenger_csv = load_passenger(getoff=True)
+    station_list = passenger_csv.columns
+    print(station_list)
+    r2_list = []
+    for n, station_num in enumerate(station_list):
+        result = passenger_predict(station_num)
+        print(n+1,'/282')
+        r2_list.append(result[1])
+    print(r2_list)
+    print("DONE")
     
 
 

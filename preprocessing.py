@@ -13,8 +13,8 @@ def make_passenger_csv(path=None, getoff=False):
     지하철 이용 승하차 인원 데이터 프레임을 만드는 함수입니다(라벨 인코딩 포함)
     일 단위로 자른다음 시간열과 정류장 행을 전환한다. 그리고 승차-하차 인원으로서 표현한다 그리고 '24시 이후', '합계', '6시 이전'은 삭제
     '''
-    if os.path.exists('./data/passenger.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
-        return pd.read_pickle('./data/passenger.pkl')
+    if os.path.exists(f'./data/passenger_getoff{getoff}.pkl'):           # 이미 존재하면 있는 파일 읽어서 반환
+        return pd.read_pickle(f'./data/passenger_getoff{getoff}.pkl')
     
     row_passenger_csv = pd.read_csv("./data/2023년 1~8월 이용인원.csv",index_col=0,encoding="UTF-8")
     if path != None:
@@ -35,7 +35,7 @@ def make_passenger_csv(path=None, getoff=False):
     for idx, data in enumerate(passenger_csv.values):
         is_ride = 1
         station_num = data[1]
-        if getoff and data[1] == '승차':
+        if getoff and (data[2] == '승차'):
             continue
         if data[2] == '하차':
             is_ride = -1
@@ -44,7 +44,9 @@ def make_passenger_csv(path=None, getoff=False):
             date = date + f" {i+5:0>2}:00:00"
             new_passenger_csv.loc[date,station_num] += is_ride * passenger
     
-    new_passenger_csv.to_pickle('./data/passenger.pkl')
+    if getoff:
+        new_passenger_csv *= -1
+    new_passenger_csv.to_pickle(f'./data/passenger_getoff{getoff}.pkl')
     return new_passenger_csv
 
 def make_transfer_csv():
