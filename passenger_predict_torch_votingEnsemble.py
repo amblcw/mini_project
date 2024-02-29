@@ -142,13 +142,13 @@ def passenger_predict(station_num)->np.ndarray:
     ])
     
     import os.path
-    PATH = f'./data/model_save/'
-    # if os.path.exists(PATH+f'passenger_ensemble_{station_num}.pkl'):
-    #     model = pickle.load(open(PATH+f'passenger_ensemble_{station_num}.pkl', 'rb'))
-    # else:
-    # # fit & eval
-    #     model.fit(x_train,y_train)
-    model.fit(x_train,y_train) # 임시
+    PATH = f'./model_save/passenger_predict/'
+    if os.path.exists(PATH+f'passenger_ensemble_{station_num}.pkl'):
+        model = pickle.load(open(PATH+f'passenger_ensemble_{station_num}.pkl', 'rb'))
+    else:
+    # fit & eval
+        model.fit(x_train,y_train)
+    # model.fit(x_train,y_train) # 임시
     
     r2 = model.score(x_test,y_test)
     y_predict = model.predict(x_test)
@@ -168,11 +168,19 @@ def passenger_predict(station_num)->np.ndarray:
 
     # 모델 저장
     pickle.dump(model,open(PATH+f'passenger_ensemble_{station_num}.pkl', 'wb'))
-    return y_predict_1
+    return y_predict_1, r2, loss
 
 if __name__ == '__main__':
-    result = passenger_predict(150)
-    print(type(result))
+    passenger_csv = load_passenger()
+    station_list = passenger_csv.columns
+    print(station_list)
+    r2_list = []
+    for n, station_num in enumerate(station_list):
+        result = passenger_predict(station_num)
+        print(n+1,'/282')
+        r2_list.append(result[1])
+    print(r2_list)
+    print("DONE")
     
 
 

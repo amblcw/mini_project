@@ -200,7 +200,7 @@ y_submit_csv['pred'] = np.around(y_predict_1.reshape(-1))
 y_submit_csv.to_csv(f'./data/weather_delay_LINE{LINE_NUM}_r2{r2:.8f}.csv')
 
 # 모델 저장
-PATH = f'./data/model_save/'
+PATH = f'./model_save/passenger_predict/'
 pickle.dump(model,open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'wb'))
 model2 = pickle.load(open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'rb'))
 model2_R2 = model2.score(x_test,y_test)
