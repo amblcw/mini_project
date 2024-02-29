@@ -1,5 +1,7 @@
+from passenger_predict_torch_votingEnsemble import passenger_predict
 import pandas as pd
 import numpy as np
+from datetime import datetime
 '''
 입력: 시작역 - 환승역 ... 환승역 - 도착역
 1. 각 역간의 이동 문제로 쪼개기
@@ -9,7 +11,7 @@ import numpy as np
 3. 각 부분문제에서 노선 자체의 지연시간 가져오기
 4. 각 시간들을 합하여 실질지연시간 구하기
 '''
-def is_max_at_station(departure_station:int,arrival_station:int)->bool:
+def is_max_at_station(departure_station:int,arrival_station:int,date:datetime)->bool:
     '''
     출발역과 도착역을 적으면 탑승시 열차가 가득차있는지 확인해줍니다
     '''
@@ -34,11 +36,21 @@ def is_max_at_station(departure_station:int,arrival_station:int)->bool:
     else:   #출발역이 그 어떤 호선에도 존재하지 않는 역인 경우
         raise Exception(f"{departure_station}station is not exist")
     
-    direct = 1  # 역번호가 증가하는 방향이면 1, 감소하는 방향이면 -1
-    departure_station_idx = np.where(line_list[line_num] == departure_station)
-    arrival_station_idx = np.where(line_list[line_num] == arrival_station)
-    if departure_station_idx > arrival_station_idx:
-        direct = -1
+    ascending = True  # 역번호가 증가하는 방향이면 True, 감소하는 방향이면 False
+    target_line = line_list[line_num]
+    departure_station_idx = int(np.where(line_list[line_num] == departure_station)[0])
+    arrival_station_idx = int(np.where(line_list[line_num] == arrival_station)[0])
+    if departure_station_idx > arrival_station_idx: # 하행
+        ascending = False
+    print(departure_station_idx,arrival_station_idx)
+    target_stations = (target_line[:departure_station_idx] if ascending else target_line[departure_station_idx:])
+    print(target_stations)
+    passenger = 0
+    for station in target_stations:
+        passenger, _, __ = passenger_predict(station)
+        print(passenger)
+        passenger = int(passenger)
+    
     
     ''' 
     1이면 낮은쪽부터, -1이면 큰쪽부터 가까운 역까지 승객 변동을 더하기 
@@ -49,5 +61,6 @@ def is_max_at_station(departure_station:int,arrival_station:int)->bool:
     return isMax
 
 if __name__ == '__main__':
-    result = is_max_at_station(2811, 2822)
-    print(result)
+    print(type(datetime.today()),datetime.today())
+    # result = is_max_at_station(156, 153)
+    # print(result)
