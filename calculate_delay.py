@@ -11,7 +11,7 @@ from datetime import datetime
 3. 각 부분문제에서 노선 자체의 지연시간 가져오기
 4. 각 시간들을 합하여 실질지연시간 구하기
 '''
-def is_max_at_station(departure_station:int,arrival_station:int,date:datetime)->bool:
+def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=datetime.today())->bool:
     '''
     출발역과 도착역을 적으면 탑승시 열차가 가득차있는지 확인해줍니다
     '''
@@ -42,14 +42,21 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime)->
     arrival_station_idx = int(np.where(line_list[line_num] == arrival_station)[0])
     if departure_station_idx > arrival_station_idx: # 하행
         ascending = False
-    print(departure_station_idx,arrival_station_idx)
+    # print(departure_station_idx,arrival_station_idx)
     target_stations = (target_line[:departure_station_idx] if ascending else target_line[departure_station_idx:])
-    print(target_stations)
+    # print(target_stations)
+    
+    date = str(date)[:14] + '00:00'
+    print("date",date)
+    full_time_list = list(pd.date_range("2023-01-01 00:00","2023-08-31 23:00",freq='h').astype(str))
+    date_idx = full_time_list.index(date)
+    print(date_idx, full_time_list[date_idx])
+    
     passenger = 0
     for station in target_stations:
         passenger, _, __ = passenger_predict(station)
-        print(passenger)
-        passenger = int(passenger)
+        passenger = int(passenger[date_idx])
+        print("",passenger)
     
     
     ''' 
@@ -61,6 +68,6 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime)->
     return isMax
 
 if __name__ == '__main__':
-    print(type(datetime.today()),datetime.today())
-    # result = is_max_at_station(156, 153)
-    # print(result)
+    # print(type(datetime.today()),datetime.today())
+    result = is_max_at_station(156, 153, "2023-01-31 10:00:00")
+    print(result)
