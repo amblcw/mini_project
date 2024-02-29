@@ -73,29 +73,10 @@ def data_gen(line_num):
     y_train = y_train.astype(np.float32)
     y_test = y_test.astype(np.float32)
     
-    return x_train, y_train, x_test, y_test, delay_scaler
+    return x, x_train, y_train, x_test, y_test, delay_scaler
 
-x_train, y_train, x_test, y_test, delay_scaler = data_gen(1)
-print(f"{x_train.shape=},{y_train.shape=},{x_test.shape=},{y_test.shape=}")
 
 # model
-class TorchLSTM(nn.Module):
-    def __init__(self,input_shape,output_shape) -> None:
-        super().__init__()
-        # self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.LSTM(input_shape,256,batch_first=True),
-            nn.ReLU(),
-            nn.Linear(256,128),
-            nn.ReLU(),
-            nn.Linear(128,output_shape)
-        )
-        
-    def forward(self,x):
-        # x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-    
 class TorchDNN(nn.Module):
     def __init__(self,input_shape,output_shape) -> None:
         super().__init__()
@@ -112,100 +93,65 @@ class TorchDNN(nn.Module):
         logits = logits.reshape(-1,)
         return logits
     
-class MyLSTM(nn.Module):
-    def __init__(self, num_classes, input_shape, hidden_size, num_layers) -> None:
-        super(MyLSTM, self).__init__()
-        
-        self.num_classes = num_classes
-        self.num_layers  = num_layers
-        self.input_size  = input_shape[0]
-        self.hidden_size = hidden_size
-        self.seq_length  = input_shape[1]
-        # self.lstm = nn.LSTM(input_size=input_shape[1], hidden_size=hidden_size,
-        #                     num_layers=num_layers, batch_first=True)
-        self.conv1d = nn.Conv1d(in_channels=self.input_size, out_channels=32, kernel_size=3, stride=1, padding=1, device=device)
-        self.lstm = nn.LSTM(input_size=self.seq_length, hidden_size=hidden_size, device=device,
-                            num_layers=num_layers, batch_first=True)
-        self.fc = nn.Sequential(
-            nn.Linear(hidden_size, 128, device=device),
-            nn.ReLU(),
-            nn.Linear(128,64, device=device),
-            nn.ReLU(),
-            nn.BatchNorm1d(64, device=device),
-            nn.Dropout(0.01),
-            nn.Linear(64,32, device=device),
-            nn.ReLU(),
-            # nn.Linear(32,16, device=device),
-            # nn.ReLU(),
-            nn.Dropout(0.01),
-            nn.Linear(32,num_classes)
-        )
+
     
-    def forward(self, x):
-        # print("x size at first",x.size())
-        x = self.conv1d(x)
-        # print("x size at second",x.size())
-        h_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        c_0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        ula, (h_out, c_out) = self.lstm(x, (h_0,c_0))
-        h_out = h_out.view(-1, self.hidden_size)   
-        # print("x size at third",x.size())
-        out = self.fc(h_out)
-        # print("x size at final",x.size())
-        return out
+
+def delay_predict(line_num):
+    data, x_train, y_train, x_test, y_test, delay_scaler = data_gen(line_num)
+    print(f"{x_train.shape=},{y_train.shape=},{x_test.shape=},{y_test.shape=}")
+
+    my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x_train.shape[1],output_shape=1),
+                                max_epochs=1000,
+                                device=device,
+                                criterion=nn.MSELoss,
+                                optimizer=torch.optim.Adam,
+                                )
+
+    xgb_params = {'learning_rate': 0.2218036245351803,
+                'n_estimators': 199,
+                'max_depth': 3,
+                'min_child_weight': 0.07709868781803283,
+                'subsample': 0.80309973945344,
+                'colsample_bytree': 0.9254025887963853,
+                'gamma': 6.628562492458777e-08,
+                'reg_alpha': 0.012998871754325427,
+                'reg_lambda': 0.10637051171111844}
     
-my_dnn = NeuralNetRegressor(TorchDNN(input_shape=x_train.shape[1],output_shape=1),
-                            max_epochs=1000,
-                            device=device,
-                            criterion=nn.MSELoss,
-                            optimizer=torch.optim.Adam,
-                            )
+    model = VotingRegressor([
+        ('My_DNN',my_dnn),
+        # ('MyLSTM',my_lstm),
+        ('RandomForestRegressor',RandomForestRegressor()),
+        ('XGBRegressor',XGBRegressor(**xgb_params)),
+        # ('CatBoostRegressor',CatBoostRegressor()), # error
+        # ('AdaBoostRegressor',AdaBoostRegressor()),
+        # ('LGBMRegressor',LGBMRegressor()),
+        # ('SVR',SVR()),
+        # ('LinearRegression',LinearRegression()),
+    ])
 
-xgb_params = {'learning_rate': 0.2218036245351803,
-              'n_estimators': 199,
-              'max_depth': 3,
-              'min_child_weight': 0.07709868781803283,
-              'subsample': 0.80309973945344,
-              'colsample_bytree': 0.9254025887963853,
-              'gamma': 6.628562492458777e-08,
-              'reg_alpha': 0.012998871754325427,
-              'reg_lambda': 0.10637051171111844}
+    # fit & eval
+    model.fit(x_train,y_train)
+    r2 = model.score(x_test,y_test)
+    y_predict = model.predict(x_test)
+    loss = mean_squared_error(y_predict,y_test)
+    print("R2:   ",r2)
+    print("LOSS: ",loss)
 
-model = VotingRegressor([
-    ('My_DNN',my_dnn),
-    # ('MyLSTM',my_lstm),
-    ('RandomForestRegressor',RandomForestRegressor()),
-    ('XGBRegressor',XGBRegressor(**xgb_params)),
-    # ('CatBoostRegressor',CatBoostRegressor()), # error
-    # ('AdaBoostRegressor',AdaBoostRegressor()),
-    # ('LGBMRegressor',LGBMRegressor()),
-    # ('SVR',SVR()),
-    # ('LinearRegression',LinearRegression()),
-])
-    
-# fit & eval
-hist = model.fit(x_train,y_train)
-r2 = model.score(x_test,y_test)
-y_predict = model.predict(x_test)
-loss = mean_squared_error(y_predict,y_test)
-print("R2:   ",r2)
-print("LOSS: ",loss)
+    ''' 여기 밑에 수정 요망'''
+    # 결과를 파일로 저장해서 확인 
+    y_test_1 = delay_scaler.inverse_transform(np.asarray(y_test).reshape(-1,1))
+    y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
+    y_submit_csv = pd.DataFrame()
+    y_submit_csv['true'] = y_test_1.reshape(-1)
+    y_submit_csv['pred'] = np.around(y_predict_1.reshape(-1))
+    y_submit_csv.to_csv(f'./data/weather_delay_LINE{LINE_NUM}_r2{r2:.8f}.csv')
 
-# 결과를 파일로 저장해서 확인
-y_test_1 = delay_scaler.inverse_transform(np.asarray(y_test).reshape(-1,1))
-y_predict_1 = delay_scaler.inverse_transform(y_predict.reshape(-1,1))
-y_submit_csv = pd.DataFrame()
-y_submit_csv['true'] = y_test_1.reshape(-1)
-y_submit_csv['pred'] = np.around(y_predict_1.reshape(-1))
-y_submit_csv.to_csv(f'./data/weather_delay_LINE{LINE_NUM}_r2{r2:.8f}.csv')
-
-# 모델 저장
-PATH = f'./model_save/passenger_predict/'
-pickle.dump(model,open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'wb'))
-model2 = pickle.load(open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'rb'))
-model2_R2 = model2.score(x_test,y_test)
-print("model2_R2: ",model2_R2)
-
+    # 모델 저장
+    PATH = f'./model_save/passenger_predict/'
+    pickle.dump(model,open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'wb'))
+    model2 = pickle.load(open(PATH+f'weather_delay_ensemble_Line{LINE_NUM}_R2_{r2:.8f}.pkl', 'rb'))
+    model2_R2 = model2.score(x_test,y_test)
+    print("model2_R2: ",model2_R2)
 
 # only my_dnn
 # R2:    0.7944192166720178
