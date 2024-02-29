@@ -56,6 +56,7 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
         passenger, _, __ = passenger_predict(station)
         print(passenger[date_idx])
         total_passenger += int(passenger[date_idx])
+        total_passenger = total_passenger if total_passenger >= 0 else 0 # total_passenger가 음수면 0으로 대체
         print(f"{station} total_passenger {total_passenger}")
 
     trans_max_list = [2800,2800,2800,2800,2240,2240,2240,1680] # 호선별 최대 수송인원
@@ -72,6 +73,11 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
     return isMax
 
 def decode_interval_csv(line_num)->pd.DataFrame:    # 데이터가 바뀌니 다시 만들어야함
+    '''
+    배차시간 CSV파일 해독하는 함수
+    입력값: 호선 번호
+    반환값: DataFrame
+    '''
     path = './data/'
     name = f'{line_num}호선_평균시간_결과.csv'
     interval_csv = pd.read_csv(path+name,index_col=0)
@@ -90,8 +96,8 @@ def decode_interval_csv(line_num)->pd.DataFrame:    # 데이터가 바뀌니 다
 
 
 if __name__ == '__main__':
-    # result = is_max_at_station(2718, 2720, "2023-04-04 08:00:00")
-    # print(result)
+    result = is_max_at_station(2718, 2720, "2023-04-04 08:00:00")
+    print(result)
     
-    decode_interval_csv(1)
+    # decode_interval_csv(1)
     pass
