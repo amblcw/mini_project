@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import numpy as np
 from torchvision.io import read_image
-from preprocessing import load_bus, load_delay, load_passenger, load_weather
+from preprocessing import load_bus, load_delay, load_passenger, load_weather, make_passenger_csv
 from function_package import split_xy
 from sklearn.metrics import r2_score
 from torcheval.metrics import R2Score
@@ -24,7 +24,7 @@ import pickle
 from sklearn.preprocessing import MinMaxScaler, MaxAbsScaler, StandardScaler, RobustScaler
 from sklearn.model_selection import train_test_split
 '''
-승하차 합산 승객 변동량 예측모델
+하차승객 예측 모델
 '''
 print(torch.__version__)    # 2.2.0+cu118
 
@@ -42,7 +42,7 @@ device = (
 def data_gen(station_num):
     # 데이터 로드
     bus_csv = load_bus()
-    passenger_csv, passenger_scaler = load_passenger(return_scaler=True)
+    passenger_csv, passenger_scaler = load_passenger(return_scaler=True,getoff=True)
     weather_csv = load_weather()
     
     station_list = list(passenger_csv.columns)
@@ -90,7 +90,7 @@ class TorchDNN(nn.Module):
         logits = logits.reshape(-1,)
         return logits
     
-def passenger_predict(station_num)->tuple[np.ndarray, float, float]:
+def getoff_predict(station_num)->tuple[np.ndarray, float, float]:
     data, x_train, y_train, x_test, y_test, delay_scaler = data_gen(station_num)
     
     xgb_params = {'learning_rate': 0.13349839953884737,
@@ -138,15 +138,15 @@ def passenger_predict(station_num)->tuple[np.ndarray, float, float]:
         ('XGBRegressor',XGBRegressor(**xgb_params)),
         # ('CatBoostRegressor',CatBoostRegressor(**cat_params)), # error
         # ('AdaBoostRegressor',AdaBoostRegressor()),
-        ('LGBMRegressor',LGBMRegressor(**lgbm_params)),
+        # ('LGBMRegressor',LGBMRegressor(**lgbm_params)),
         # ('SVR',SVR()),
         ('LinearRegression',LinearRegression()),
     ])
     
     import os.path
-    PATH = f'./model_save/passenger_predict/'
-    if os.path.exists(PATH+f'passenger_ensemble_{station_num}.pkl'):
-        model = pickle.load(open(PATH+f'passenger_ensemble_{station_num}.pkl', 'rb'))
+    PATH = f'./model_save/getoff_predict/'
+    if os.path.exists(PATH+f'getoff_ensemble_{station_num}.pkl'):
+        model = pickle.load(open(PATH+f'getoff_ensemble_{station_num}.pkl', 'rb'))
     else:
     # fit & eval
         model.fit(x_train,y_train)
@@ -164,16 +164,16 @@ def passenger_predict(station_num)->tuple[np.ndarray, float, float]:
     y_submit = y_submit.reshape(-1)
 
     # 모델 저장
-    pickle.dump(model,open(PATH+f'passenger_ensemble_{station_num}.pkl', 'wb'))
+    pickle.dump(model,open(PATH+f'getoff_ensemble_{station_num}.pkl', 'wb'))
     return y_submit, r2, loss
 
 if __name__ == '__main__':
-    passenger_csv = load_passenger()
+    passenger_csv = load_passenger(getoff=True)
     station_list = passenger_csv.columns
     print(station_list)
     r2_list = []
     for n, station_num in enumerate(station_list):
-        result = passenger_predict(station_num)
+        result = getoff_predict(station_num)
         print(n+1,'/282')
         r2_list.append(result[1])
     print(r2_list)
