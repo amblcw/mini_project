@@ -90,7 +90,11 @@ class TorchDNN(nn.Module):
         logits = logits.reshape(-1,)
         return logits
     
+<<<<<<< HEAD
 def getoff_predict(station_num)->tuple[np.ndarray, float, float]:
+=======
+def passenger_predict(station_num)->np.ndarray:
+>>>>>>> 97fa4f618cd869f9e2cd33cd0d4679dfd70304dd
     data, x_train, y_train, x_test, y_test, delay_scaler = data_gen(station_num)
     
     xgb_params = {'learning_rate': 0.13349839953884737,
@@ -173,7 +177,11 @@ if __name__ == '__main__':
     print(station_list)
     r2_list = []
     for n, station_num in enumerate(station_list):
+<<<<<<< HEAD
         result = getoff_predict(station_num)
+=======
+        result = passenger_predict(station_num)
+>>>>>>> 97fa4f618cd869f9e2cd33cd0d4679dfd70304dd
         print(n+1,'/282')
         r2_list.append(result[1])
     print(r2_list)

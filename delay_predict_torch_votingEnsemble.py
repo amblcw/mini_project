@@ -95,7 +95,11 @@ class TorchDNN(nn.Module):
         logits = logits.reshape(-1,)
         return logits
     
+<<<<<<< HEAD
 def delay_predict(line_num)->tuple[np.ndarray, float, float]:
+=======
+def delay_predict(line_num):
+>>>>>>> 97fa4f618cd869f9e2cd33cd0d4679dfd70304dd
     data, x_train, y_train, x_test, y_test, delay_scaler = data_gen(line_num)
     print(f"{x_train.shape=},{y_train.shape=},{x_test.shape=},{y_test.shape=}")
 
