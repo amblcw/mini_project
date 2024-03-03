@@ -130,7 +130,7 @@ def passenger_predict(station_num)->tuple[np.ndarray, float, float]:
                             criterion=nn.MSELoss,
                             optimizer=torch.optim.Adam,
                             )
-
+ 
     model = VotingRegressor([
         # ('My_DNN',my_dnn),
         # ('MyLSTM',my_lstm),

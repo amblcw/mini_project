@@ -57,10 +57,12 @@ def is_max_at_station(departure_station:int,arrival_station:int,date:datetime=da
         passenger, _, __ = passenger_predict(station)
         print(passenger[date_idx])
         total_passenger += int(passenger[date_idx])
-        total_passenger = total_passenger if total_passenger >= 0 else 0 # total_passenger가 음수면 0으로 대체
+        total_passenger = total_passenger if total_passenger >= 0 else 0 
+        # total_passenger가 음수면 0으로 대체
         print(f"{station} total_passenger {total_passenger}")
 
-    trans_max_list = [2800,2800,2800,2800,2240,2240,2240,1680] # 호선별 최대 수송인원
+    trans_max_list = [2800,2800,2800,2800,2240,2240,2240,1680] 
+    # 호선별 최대 수송인원
     
     ''' 
     1이면 낮은쪽부터, -1이면 큰쪽부터 가까운 역까지 승객 변동을 더하기 
@@ -78,7 +80,6 @@ def decode_interval_csv(line_num)->pd.DataFrame:    # 데이터가 바뀌니 다
     배차시간 CSV파일 해독하는 함수
     입력값: 호선 번호
     반환값: DataFrame
-<<<<<<< HEAD
     
     '''
     interval_csv = pd.read_csv('./data/상행선배차간격중위값_수정.csv')
@@ -95,23 +96,10 @@ def decode_interval_csv(line_num)->pd.DataFrame:    # 데이터가 바뀌니 다
     # print(interval_csv)
     for idx, data in enumerate(interval_csv.values): # 시간을 초단위로 전환
         data = str(data).split(':')
-=======
-    '''
-    path = './data/'
-    name = f'{line_num}호선_평균시간_결과.csv'
-    interval_csv = pd.read_csv(path+name,index_col=0)
-    
-    interval_csv.fillna(method='ffill',inplace=True)
-    interval_csv['평균 시간'] = interval_csv['평균 시간'].str.replace("0 days ","")
-    date_format = r'%H:%M:%S'
-    for idx, data in enumerate(interval_csv.values):
-        data = str(data[0]).split(':')
->>>>>>> 97fa4f618cd869f9e2cd33cd0d4679dfd70304dd
         sec = 0
         for i, n in enumerate(data):
             sec += round(float(n)) * (60 ** (2-i))
         interval_csv.iloc[idx] = sec
-<<<<<<< HEAD
         
     return interval_csv
 
@@ -179,15 +167,4 @@ if __name__ == '__main__':
     # print(decode_interval_csv(1))
     getin_delay = getin_delay_predict(2822, 2828, "2023-04-04 08:00:00")
     print("getin delay",getin_delay)
-=======
-    print(interval_csv)
-    pass
-
-
-if __name__ == '__main__':
-    # result = is_max_at_station(2827, 2828, "2023-04-04 08:00:00")
-    # print(result)
-    
-    decode_interval_csv(1)
->>>>>>> 97fa4f618cd869f9e2cd33cd0d4679dfd70304dd
     pass
